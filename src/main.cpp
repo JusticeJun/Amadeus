@@ -4,6 +4,7 @@
 #include <esp_heap_caps.h>
 
 #include "AssetManager.h"
+#include "CharacterController.h"
 #include "CrtEffect.h"
 #include "DisplayManager.h"
 #include "ProjectConfig.h"
@@ -12,6 +13,7 @@ namespace {
 DisplayManager display;
 AssetManager assets;
 CrtEffect crtEffect;
+CharacterController character;
 
 void printBytes(const char* label, uint64_t bytes) {
   Serial.printf("%-24s %llu bytes (%.2f MiB)\n", label,
@@ -96,12 +98,15 @@ void setup() {
   crtConfig.syncTearMaxShift = ProjectConfig::Crt::SYNC_TEAR_MAX_SHIFT;
   if (crtEffect.begin(display, assets.imagePixels(), crtConfig)) {
     Serial.println("Ambient CRT effect started.");
+    character.begin(crtEffect);
+    Serial.println("PC bridge protocol ready.");
   } else {
     Serial.println("Ambient CRT effect failed to start.");
   }
 }
 
 void loop() {
+  character.update(Serial);
   crtEffect.update();
   delay(1);
 }

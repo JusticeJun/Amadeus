@@ -62,6 +62,11 @@ void CrtEffect::setEnabled(bool enabled) {
   if (!enabled) bandY_ = -1;
 }
 
+void CrtEffect::triggerTransition() {
+  if (!config_.enabled) return;
+  glitchFramesRemaining_ = max<uint8_t>(glitchFramesRemaining_, 5);
+}
+
 void CrtEffect::update() {
   if (!config_.enabled || display_ == nullptr || source_ == nullptr ||
       config_.mode != CrtMode::Ambient) {

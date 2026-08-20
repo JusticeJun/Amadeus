@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+import hashlib
+import json
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+import winsound
+
+from .config import Settings
+from .models import LlmResult
+
+
+class TtsError(RuntimeError):
+    pass
+
+
+class TtsEngine(ABC):
+    @abstractmethod
+    def synthesize(self, result: LlmResult) -> Path | None: ...
+
+    def play(self, audio_path: Path | None) -> None:
+        if audio_path is not None:
+            winsound.PlaySound(str(audio_path), winsound.SND_FILENAME)
+
+
+class SilentTtsEngine(TtsEngine):
+    def synthesize(self, result: LlmResult) -> Path | None:
+        del result
+        return None
+
+
+class GptSovitsEngine(TtsEngine):
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+        settings.generated_dir.mkdir(parents=True, exist_ok=True)
+
+    def _references(self) -> list[Path]:
+        supported = {".wav", ".flac", ".mp3"}
+        return [
+            path.resolve()
+            for path in sorted(self._settings.voice_reference_dir.glob("*"))
+            if path.suffix.lower() in supported
+        ]
+
+    def synthesize(self, result: LlmResult) -> Path:
+        references = self._references()
+        if not references:
+            raise TtsError(f"기준 음성이 없습니다: {self._settings.voice_reference_dir}")
+        request_body = {
+            "text": result.reply,
+            "text_lang": self._settings.gpt_sovits_text_language,
+            "ref_audio_path": str(references[0]),
+            "aux_ref_audio_paths": [str(path) for path in references[1:]],
+            "prompt_text": "",
+            "prompt_lang": self._settings.gpt_sovits_prompt_language,
+            "media_type": "wav",
+            "streaming_mode": False,
+            "speed_factor": result.speech_style.speed,
+        }
+        cache_key = json.dumps(
+            {
+                "backend": "gpt_sovits",
+                "api": self._settings.gpt_sovits_api_url,
+                "request": request_body,
+                "references": [
+                    (str(path), path.stat().st_mtime_ns) for path in references
+                ],
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:24]
+        output = self._settings.generated_dir / f"gpt_sovits_{digest}.wav"
+        if output.exists() and output.stat().st_size >= 44 and output.read_bytes()[:4] == b"RIFF":
+            print(f"[gpt-sovits] 캐시 사용: {output.name}")
+            return output
+        payload = json.dumps(request_body, ensure_ascii=False).encode("utf-8")
+        request = Request(
+            self._settings.gpt_sovits_api_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=self._settings.gpt_sovits_timeout_seconds) as response:
+                audio = response.read()
+        except HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            raise TtsError(f"GPT-SoVITS API 오류 {exc.code}: {detail}") from exc
+        except (URLError, TimeoutError) as exc:
+            raise TtsError(
+                f"GPT-SoVITS 서버에 연결할 수 없습니다: {self._settings.gpt_sovits_api_url}"
+            ) from exc
+        if len(audio) < 44 or audio[:4] != b"RIFF":
+            raise TtsError("GPT-SoVITS가 유효한 WAV를 반환하지 않았습니다.")
+        temporary = output.with_suffix(".wav.part")
+        temporary.write_bytes(audio)
+        temporary.replace(output)
+        return output
+
+
+def create_tts_engine(settings: Settings) -> TtsEngine:
+    if settings.tts_engine == "silent":
+        return SilentTtsEngine()
+    if settings.tts_engine == "gpt_sovits":
+        return GptSovitsEngine(settings)
+    raise TtsError(f"지원하지 않는 TTS 엔진: {settings.tts_engine}")
