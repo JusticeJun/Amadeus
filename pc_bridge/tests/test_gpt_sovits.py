@@ -88,6 +88,36 @@ def test_primary_reference_can_be_isolated(tmp_path: Path, monkeypatch) -> None:
     assert captured["body"]["aux_ref_audio_paths"] == []
 
 
+def test_typographic_english_punctuation_is_normalized_for_tts(tmp_path: Path, monkeypatch) -> None:
+    settings = make_settings(tmp_path)
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr("app.tts.urlopen", fake_urlopen)
+    create_tts_engine(settings).synthesize(
+        LlmResult(reply="Python is a high‑level language, and it’s readable…")
+    )
+    assert captured["body"]["text"] == "Python is a high-level language, and it's readable..."
+
+
+def test_common_llm_unicode_symbols_are_normalized_for_tts(tmp_path: Path, monkeypatch) -> None:
+    settings = make_settings(tmp_path)
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["body"] = json.loads(request.data.decode("utf-8"))
+        return FakeResponse()
+
+    monkeypatch.setattr("app.tts.urlopen", fake_urlopen)
+    create_tts_engine(settings).synthesize(
+        LlmResult(reply="ＡＰＩ\u200b • A→B, 3×4=12, x≤10, 거의≈같아 😊 日本語")
+    )
+    assert captured["body"]["text"] == "API - A -> B, 3 x 4=12, x <= 10, 거의 ~ 같아 日本語"
+
+
 def test_explicit_auxiliary_reference_is_selected(tmp_path: Path, monkeypatch) -> None:
     settings = make_settings(tmp_path)
     values = dict(settings.__dict__)

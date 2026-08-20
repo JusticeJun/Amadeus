@@ -37,19 +37,23 @@ def test_reply_is_cleaned_and_safely_shortened() -> None:
         "emotion": "neutral",
     }))
     assert "*" not in result.reply
-    assert len(result.reply) <= 481
+    assert len(result.reply) <= 651
 
 
-def test_reply_is_limited_to_four_spoken_sentences() -> None:
+def test_reply_is_limited_to_five_spoken_sentences() -> None:
     result = LlmResult.parse(json.dumps({
-        "reply": "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다. 다섯째 문장입니다.",
+        "reply": "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다. 다섯째 문장입니다. 여섯째 문장입니다.",
         "emotion": "neutral",
     }))
-    assert result.reply == "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다."
+    assert result.reply == "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다. 다섯째 문장입니다."
 
 
 def test_direct_user_echo_is_detected() -> None:
     assert is_repetitive_reply("지금은 아주 좋은데?", "지금은 아주 좋은데?", [])
+
+
+def test_short_direct_user_echo_is_detected() -> None:
+    assert is_repetitive_reply("뭐가?", "뭐가", [])
 
 
 def test_recent_assistant_repetition_is_detected() -> None:
