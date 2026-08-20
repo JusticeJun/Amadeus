@@ -4,12 +4,78 @@ from abc import ABC, abstractmethod
 import hashlib
 import json
 from pathlib import Path
+import re
+import unicodedata
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import winsound
 
 from .config import PROJECT_ROOT, Settings
 from .models import LlmResult
+
+
+_TTS_PUNCTUATION_TRANSLATION = str.maketrans({
+    "\u00a0": " ",
+    "\u1680": " ",
+    "\u2000": " ",
+    "\u2001": " ",
+    "\u2002": " ",
+    "\u2003": " ",
+    "\u2004": " ",
+    "\u2005": " ",
+    "\u2006": " ",
+    "\u2007": " ",
+    "\u2008": " ",
+    "\u2009": " ",
+    "\u200a": " ",
+    "\u202f": " ",
+    "\u205f": " ",
+    "\u3000": " ",
+    "\u2010": "-",
+    "\u2011": "-",
+    "\u2012": "-",
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2015": "-",
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201a": "'",
+    "\u201b": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u201e": '"',
+    "\u2032": "'",
+    "\u2033": '"',
+    "\u2026": "...",
+    "\u2022": "-",
+    "\u2023": "-",
+    "\u2043": "-",
+    "\u2212": "-",
+    "\u00d7": " x ",
+    "\u00f7": " / ",
+    "\u2260": " != ",
+    "\u2264": " <= ",
+    "\u2265": " >= ",
+    "\u2248": " ~ ",
+    "\u00b1": " +/- ",
+    "\u2190": " <- ",
+    "\u2192": " -> ",
+    "\u2194": " <-> ",
+    "\u21d2": " -> ",
+    "\u2044": "/",
+})
+
+
+def normalize_tts_text(text: str) -> str:
+    """Make LLM typography safe for Windows G2P without changing letters."""
+    normalized = unicodedata.normalize("NFKC", text).translate(_TTS_PUNCTUATION_TRANSLATION)
+    normalized = "".join(
+        character
+        for character in normalized
+        if unicodedata.category(character) not in {"Cc", "Cf", "Cs", "So"}
+        or character in "\n\t"
+    )
+    return re.sub(r"[ \t\r\f\v]+", " ", normalized).strip()
 
 
 class TtsError(RuntimeError):
@@ -86,7 +152,7 @@ class GptSovitsEngine(TtsEngine):
         if not references:
             raise TtsError(f"기준 음성이 없습니다: {self._settings.voice_reference_dir}")
         request_body = {
-            "text": result.reply,
+            "text": normalize_tts_text(result.reply),
             "text_lang": self._settings.gpt_sovits_text_language,
             "ref_audio_path": str(references[0]),
             "aux_ref_audio_paths": [str(path) for path in references[1:]],

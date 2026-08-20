@@ -62,7 +62,7 @@ _RESPONSE_SCHEMA = {
     "schema": {
         "type": "object",
         "properties": {
-            "reply": {"type": "string", "minLength": 1, "maxLength": 480},
+            "reply": {"type": "string", "minLength": 1, "maxLength": 650},
             "emotion": {
                 "type": "string",
                 "enum": ["neutral", "happy", "shy", "pout", "surprised", "thinking"],
@@ -171,7 +171,7 @@ class GroqLlmClient(LlmClient):
     def _retry_delay(exc: urllib.error.HTTPError, attempt: int) -> float:
         try:
             retry_after = float(exc.headers.get("retry-after", ""))
-            return min(max(retry_after, 0.0), 5.0)
+            return min(max(retry_after, 0.0), 15.0)
         except (TypeError, ValueError):
             return min(0.5 * (2 ** attempt), 2.0)
 

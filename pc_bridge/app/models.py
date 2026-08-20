@@ -87,7 +87,7 @@ class ChatMessage:
     content: str
 
 
-def normalize_reply(value: str, max_chars: int = 480, max_sentences: int = 4) -> str:
+def normalize_reply(value: str, max_chars: int = 650, max_sentences: int = 5) -> str:
     """Make model output safe and natural for Korean TTS without changing its meaning."""
     text = re.sub(r"```(?:\w+)?|```", "", str(value))
     text = re.sub(r"[*_#`]", "", text)
@@ -112,6 +112,8 @@ def is_repetitive_reply(reply: str, user_text: str, history: list[ChatMessage]) 
     if not candidate:
         return True
     user = _comparison_text(user_text)
+    if user and candidate == user:
+        return True
     if len(user) >= 4 and _too_similar(candidate, user, threshold=0.86):
         return True
     recent_pairs: list[tuple[str, str]] = []
