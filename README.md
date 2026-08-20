@@ -40,6 +40,10 @@ Amadeus는 ESP32-S3와 3.5인치 세로형 LCD로 만드는 탁상형 AI 비서 
 
 하드웨어 연결과 기능 추가는 한 단계씩 실제 보드에서 검증한 뒤 진행합니다.
 
+## PC AI 브리지
+
+키보드 입력, mock/Groq 대화, GPT-SoVITS 한국어 음성 생성과 USB 시리얼 감정 전송은 `pc_bridge/`에서 실행합니다. 설치, mock 실행, Groq 키 설정, 음성 기준 파일 변환 및 GPT-SoVITS 사용법은 [PC 브리지 안내](pc_bridge/README.md)를 참고하세요.
+
 ## 저장소 구조
 
 ```text

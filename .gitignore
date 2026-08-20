@@ -6,11 +6,14 @@
 # VS Code generated indexes (keep shareable workspace settings if added later)
 .vscode/.browse.c_cpp.db*
 .vscode/ipch/
+.vscode/
 
 # Logs and local secrets
 *.log
 .env
 .env.*
+!.env.example
+!pc_bridge/.env.example
 secrets.*
 credentials.*
 config/secrets.*
@@ -23,3 +26,21 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# PC bridge virtual environment and runtime artifacts
+pc_bridge/.venv/
+pc_bridge/.pytest_cache/
+pc_bridge/.env
+
+# Third-party GPT-SoVITS runtime, virtual environment, and model weights
+tools/GPT-SoVITS/
+tools/gpt-sovits-runtime/
+
+# Private voice recordings, generated speech, and model/cache data
+voice/source/*
+!voice/source/.gitkeep
+voice/references/chris/*
+!voice/references/chris/.gitkeep
+voice/generated/*
+!voice/generated/.gitkeep
+voice/cache/*
+!voice/cache/.gitkeep

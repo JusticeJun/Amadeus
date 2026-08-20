@@ -44,6 +44,7 @@ class CrtEffect {
              const CrtEffectConfig& config);
   void update();
   void setEnabled(bool enabled);
+  void triggerTransition();
 
  private:
   void restoreBand(int16_t startY);
