@@ -69,7 +69,7 @@ class Settings:
             groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
             groq_timeout_seconds=float(os.getenv("GROQ_TIMEOUT_SECONDS", "30")),
             groq_temperature=float(os.getenv("GROQ_TEMPERATURE", "0.45")),
-            groq_max_completion_tokens=int(os.getenv("GROQ_MAX_COMPLETION_TOKENS", "256")),
+            groq_max_completion_tokens=int(os.getenv("GROQ_MAX_COMPLETION_TOKENS", "384")),
             groq_max_retries=int(os.getenv("GROQ_MAX_RETRIES", "2")),
             groq_reasoning_effort=os.getenv("GROQ_REASONING_EFFORT", "low").lower(),
             tts_engine=os.getenv("TTS_ENGINE", "gpt_sovits").lower(),

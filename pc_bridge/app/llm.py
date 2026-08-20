@@ -62,7 +62,7 @@ _RESPONSE_SCHEMA = {
     "schema": {
         "type": "object",
         "properties": {
-            "reply": {"type": "string", "minLength": 1, "maxLength": 240},
+            "reply": {"type": "string", "minLength": 1, "maxLength": 480},
             "emotion": {
                 "type": "string",
                 "enum": ["neutral", "happy", "shy", "pout", "surprised", "thinking"],
@@ -149,6 +149,9 @@ class GroqLlmClient(LlmClient):
                         recovered_structured_output=True,
                     )
                     return LlmResult.parse(recovered)
+                if attempt < self._settings.groq_max_retries and self._error_code(detail) == "output_parse_failed":
+                    self._sleep(0.1)
+                    continue
                 if attempt < self._settings.groq_max_retries and (
                     exc.code == 429 or exc.code == 498 or exc.code >= 500
                 ):
@@ -198,3 +201,11 @@ class GroqLlmClient(LlmClient):
                 return arguments
             return None
         return generated
+
+    @staticmethod
+    def _error_code(detail: str) -> str:
+        try:
+            error = json.loads(detail).get("error") or {}
+            return str(error.get("code") or "")
+        except (AttributeError, json.JSONDecodeError):
+            return ""

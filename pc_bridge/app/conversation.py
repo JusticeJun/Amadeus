@@ -84,8 +84,9 @@ class ConversationManager:
             "짧은 새로운 반응이나 정보를 하나 더해라. 후보 문장을 반복하지 마라: "
             + result.reply,
         )]
-        replacement = self._llm.complete(user_text, retry_history)
-        return replacement if not is_repetitive_reply(replacement.reply, user_text, history) else LlmResult(
-            reply="방금은 같은 표현을 되풀이했네요. 조금 다르게 생각해서 말씀드릴게요.",
-            emotion="thinking",
-        )
+        try:
+            replacement = self._llm.complete(user_text, retry_history)
+        except LlmError as exc:
+            print(f"[llm] 재표현 요청 실패, 원래의 유효한 답변을 사용합니다: {exc}")
+            return result
+        return replacement if not is_repetitive_reply(replacement.reply, user_text, history) else result

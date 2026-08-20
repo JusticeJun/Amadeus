@@ -175,3 +175,26 @@ def test_authentication_error_is_not_retried(tmp_path: Path) -> None:
     with pytest.raises(LlmError, match="401"):
         client.complete("테스트", [])
     assert calls == 1
+
+
+def test_output_parse_failure_is_retried(tmp_path: Path) -> None:
+    calls = 0
+
+    def opener(request, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            body = json.dumps({
+                "error": {
+                    "code": "output_parse_failed",
+                    "failed_generation": "Need to answer with the name.",
+                }
+            }).encode("utf-8")
+            raise urllib.error.HTTPError(
+                "https://api.groq.test", 400, "error", Message(), BytesIO(body)
+            )
+        return FakeResponse(successful_payload())
+
+    client = GroqLlmClient(make_settings(tmp_path), opener=opener, sleeper=lambda _: None)
+    assert client.complete("이름이 뭐야?", []).reply == "도와드릴게요."
+    assert calls == 2

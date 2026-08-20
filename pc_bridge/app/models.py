@@ -87,15 +87,15 @@ class ChatMessage:
     content: str
 
 
-def normalize_reply(value: str, max_chars: int = 240) -> str:
+def normalize_reply(value: str, max_chars: int = 480, max_sentences: int = 4) -> str:
     """Make model output safe and natural for Korean TTS without changing its meaning."""
     text = re.sub(r"```(?:\w+)?|```", "", str(value))
     text = re.sub(r"[*_#`]", "", text)
     text = re.sub(r"\([^)]*(?:행동|표정|웃음|한숨)[^)]*\)", "", text)
     text = re.sub(r"\s+", " ", text).strip()
     sentence_ends = list(re.finditer(r"[.!?](?=\s|$)", text))
-    if len(sentence_ends) > 2:
-        text = text[:sentence_ends[1].end()].strip()
+    if len(sentence_ends) > max_sentences:
+        text = text[:sentence_ends[max_sentences - 1].end()].strip()
     if len(text) <= max_chars:
         return text
     shortened = text[:max_chars + 1]
@@ -114,15 +114,25 @@ def is_repetitive_reply(reply: str, user_text: str, history: list[ChatMessage]) 
     user = _comparison_text(user_text)
     if len(user) >= 4 and _too_similar(candidate, user, threshold=0.86):
         return True
-    recent_assistant = [
-        _comparison_text(item.content)
-        for item in history
-        if item.role == "assistant"
-    ][-4:]
-    return any(
-        previous and _too_similar(candidate, previous, threshold=0.82)
-        for previous in recent_assistant
-    )
+    recent_pairs: list[tuple[str, str]] = []
+    for index, item in enumerate(history):
+        if item.role != "assistant":
+            continue
+        prior_user = next(
+            (history[cursor].content for cursor in range(index - 1, -1, -1)
+             if history[cursor].role == "user"),
+            "",
+        )
+        recent_pairs.append((_comparison_text(prior_user), _comparison_text(item.content)))
+    for prior_user, previous_reply in recent_pairs[-4:]:
+        if not previous_reply or not _too_similar(candidate, previous_reply, threshold=0.82):
+            continue
+        # Repeated factual questions (for example, asking a name again) may
+        # legitimately require the same answer.
+        if prior_user and _too_similar(user, prior_user, threshold=0.72):
+            continue
+        return True
+    return False
 
 
 def _comparison_text(value: str) -> str:
