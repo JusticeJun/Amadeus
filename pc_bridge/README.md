@@ -45,8 +45,10 @@ Create a Groq account and API key yourself. Copy `.env.example` to `pc_bridge/.e
 ```dotenv
 AMADEUS_MODE=groq
 GROQ_API_KEY=your_key_here
-GROQ_MODEL=llama-3.3-70b-versatile
+GROQ_MODEL=openai/gpt-oss-20b
 ```
+
+The default model uses low reasoning effort to reduce spoken-response latency. Each turn prints LLM time, TTS time, time-to-audio, and token usage. Override `GROQ_REASONING_EFFORT` only after comparing latency and answer quality.
 
 Never put the key in source code, `platformio.ini`, screenshots, commits, or issue reports. The API URL, model and timeout can all be changed in `.env`. HTTP errors, timeouts, rate limits, and malformed replies are reported without terminating the interactive bridge.
 
@@ -80,8 +82,28 @@ Keep that terminal open. In a second terminal, select the backend in `pc_bridge/
 TTS_ENGINE=gpt_sovits
 GPT_SOVITS_API_URL=http://127.0.0.1:9880/tts
 GPT_SOVITS_PROMPT_LANGUAGE=ja
+GPT_SOVITS_PROMPT_TEXT=
 GPT_SOVITS_TEXT_LANGUAGE=ko
+GPT_SOVITS_SPEED_FACTOR=1.0
+GPT_SOVITS_TEXT_SPLIT_METHOD=cut1
+GPT_SOVITS_SEED=42
+GPT_SOVITS_PRIMARY_REFERENCE=
+GPT_SOVITS_USE_AUX_REFERENCES=true
+GPT_SOVITS_AUX_REFERENCES=
+GPT_SOVITS_TOP_K=5
+GPT_SOVITS_TOP_P=0.85
+GPT_SOVITS_TEMPERATURE=0.7
 ```
+
+Short replies are kept in one synthesis group (`cut1`) so a comma does not split the voice into noticeably different tones. A fixed seed makes inference reproducible. Add more reference recordings only after comparing this deterministic baseline; more files are not automatically better.
+
+The locally approved production voice may use a derived Korean anchor with its exact transcript. Keep that private anchor under `voice/references/anchors/`; it is excluded from Git just like the original recordings. The public `.env.example` intentionally contains no private filename or transcript.
+
+## Voice stability
+
+Early prompt-free cross-language tests occasionally shifted from the intended soft female timbre to a sharper or lower boy-like timbre depending on the Korean sentence. The adopted local configuration fixes that regression by using a user-approved Korean anchor and its exact transcript, one continuous synthesis group, a fixed seed, and no auxiliary-reference mixing. This keeps the selected Chris voice reproducible across the tested sentence set.
+
+The approved recording, derived anchor, transcript, comparison WAVs, and generated cache remain private and are never committed. The repository contains only the engine integration, configurable controls, diagnostics, and regression tests. Conservative emotion samples use small text and speed changes; stronger emotions should use separately approved emotion anchors rather than large pitch or speed shifts.
 
 Generated speech is cached in `voice/generated/`. Stop the GPT-SoVITS server with Ctrl+C when finished to release GPU memory.
 
