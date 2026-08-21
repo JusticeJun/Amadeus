@@ -13,7 +13,7 @@ def main() -> int:
     parser.add_argument("--baud", type=int, default=115200)
     args = parser.parse_args()
     commands = [
-        {"type": "state", "emotion": "thinking"},
+        {"type": "state", "emotion": "wondering"},
         {"type": "state", "emotion": "happy"},
         {"type": "state", "emotion": "unsupported"},
     ]

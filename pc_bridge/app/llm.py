@@ -39,16 +39,16 @@ class MockLlmClient(LlmClient):
     def complete(self, user_text: str, history: list[ChatMessage]) -> LlmResult:
         del history
         lowered = user_text.lower()
-        if any(word in lowered for word in ("고마워", "사랑", "예쁘", "귀여")):
-            emotion, reply = "shy", "그렇게 말씀하시면 조금 민망하네요. 그래도 고마워요."
-        elif any(word in lowered for word in ("놀라", "깜짝")):
-            emotion, reply = "surprised", "조금 놀랐어요. 갑자기 그러시면 곤란해요."
+        if any(word in lowered for word in ("사랑", "좋아해")):
+            emotion, reply = "shy", "갑자기 그렇게 말하면 좀 부끄럽잖아. 그래도 고마워."
         elif any(word in lowered for word in ("싫어", "바보", "미워")):
-            emotion, reply = "pout", "그런 말은 별로예요. 그래도 필요한 일은 도와드릴게요."
-        elif any(word in lowered for word in ("안녕", "반가")):
-            emotion, reply = "happy", "안녕하세요. 오늘도 천천히 시작해 봐요."
+            emotion, reply = "angry", "그런 말은 기분 나쁜데. 장난이라도 적당히 해."
+        elif any(word in lowered for word in ("슬퍼", "실망", "속상")):
+            emotion, reply = "sad", "그랬구나. 그건 정말 속상했겠다."
+        elif any(word in lowered for word in ("고마워", "예쁘", "잘했", "반가")):
+            emotion, reply = "happy", "그렇게 말해 주니 기분 좋네. 고마워."
         else:
-            emotion, reply = "neutral", f"네, '{user_text}'에 대해 조금 더 생각해 볼게요."
+            emotion, reply = "answering", f"응, '{user_text}' 얘기를 조금 더 해 보자."
         return LlmResult.parse(json.dumps({
             "reply": reply,
             "emotion": emotion,
@@ -65,7 +65,7 @@ _RESPONSE_SCHEMA = {
             "reply": {"type": "string", "minLength": 1, "maxLength": 650},
             "emotion": {
                 "type": "string",
-                "enum": ["neutral", "happy", "shy", "pout", "surprised", "thinking"],
+                "enum": ["answering", "happy", "angry", "shy", "sad", "wondering"],
             },
             "speech_style": {
                 "type": "object",

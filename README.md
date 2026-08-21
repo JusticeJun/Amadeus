@@ -68,7 +68,7 @@ PlatformIO Core가 PATH에 없다면 설치된 실행 파일의 전체 경로를
 원본 PNG는 변경하지 않습니다. 파생 RGB565 파일을 만든 뒤 파일시스템과 펌웨어를 각각 업로드합니다.
 
 ```powershell
-& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" tools/convert_rgb565.py assets/source/characters/neutral_default_320x480.png data/neutral_default.rgb565
+& "$env:USERPROFILE\.platformio\penv\Scripts\python.exe" tools/convert_rgb565.py assets/characters/neutral_320x480.png data/neutral.rgb565
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run --target uploadfs
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run --target upload
 ```
