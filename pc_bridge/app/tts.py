@@ -69,6 +69,7 @@ _TTS_PUNCTUATION_TRANSLATION = str.maketrans({
 def normalize_tts_text(text: str) -> str:
     """Make LLM typography safe for Windows G2P without changing letters."""
     normalized = unicodedata.normalize("NFKC", text).translate(_TTS_PUNCTUATION_TRANSLATION)
+    normalized = _normalize_spoken_measurements(normalized)
     normalized = "".join(
         character
         for character in normalized
@@ -76,6 +77,74 @@ def normalize_tts_text(text: str) -> str:
         or character in "\n\t"
     )
     return re.sub(r"[ \t\r\f\v]+", " ", normalized).strip()
+
+
+_NUMBER = r"-?\d+(?:\.\d+)?"
+
+
+def _normalize_spoken_measurements(text: str) -> str:
+    replacements = (
+        (rf"({_NUMBER})\s*[~\-]\s*({_NUMBER})\s*(?:°?C(?![A-Za-z])|도)",
+         lambda match: f"{_number_to_korean(match.group(1))} 도에서 "
+                       f"{_number_to_korean(match.group(2))} 도"),
+        (rf"({_NUMBER})\s*(?:°?C(?![A-Za-z])|도)",
+         lambda match: f"{_number_to_korean(match.group(1))} 도"),
+        (rf"({_NUMBER})\s*%",
+         lambda match: f"{_number_to_korean(match.group(1))} 퍼센트"),
+        (rf"({_NUMBER})\s*m\s*/\s*s(?![A-Za-z])",
+         lambda match: f"초속 {_number_to_korean(match.group(1))} 미터"),
+        (rf"({_NUMBER})\s*km\s*/\s*h(?![A-Za-z])",
+         lambda match: f"시속 {_number_to_korean(match.group(1))} 킬로미터"),
+        (rf"({_NUMBER})\s*mm(?![A-Za-z])",
+         lambda match: f"{_number_to_korean(match.group(1))} 밀리미터"),
+    )
+    for pattern, replacement in replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    return text
+
+
+def _number_to_korean(value: str) -> str:
+    negative = value.startswith("-")
+    unsigned = value[1:] if negative else value
+    integer, dot, fraction = unsigned.partition(".")
+    spoken = _integer_to_korean(int(integer or "0"), speech_spacing=True)
+    if dot:
+        digits = "영일이삼사오육칠팔구"
+        spoken += " 점 " + " ".join(digits[int(digit)] for digit in fraction)
+    return ("마이너스 " if negative else "") + spoken
+
+
+def _integer_to_korean(value: int, *, speech_spacing: bool = False) -> str:
+    if value == 0:
+        return "영"
+    digits = "영일이삼사오육칠팔구"
+    small_units = ("", "십", "백", "천")
+    large_units = ("", "만", "억", "조")
+    groups = []
+    while value:
+        groups.append(value % 10000)
+        value //= 10000
+    parts = []
+    for group_index in range(len(groups) - 1, -1, -1):
+        group = groups[group_index]
+        if not group:
+            continue
+        group_parts = []
+        for position in range(3, -1, -1):
+            divisor = 10 ** position
+            digit = group // divisor % 10
+            if not digit:
+                continue
+            if digit != 1 or position == 0:
+                group_parts.append(digits[digit])
+            group_parts.append(small_units[position])
+        parts.append("".join(group_parts) + large_units[group_index])
+    spoken = "".join(parts)
+    if speech_spacing:
+        # GPT-SoVITS can collapse a glued form such as "이십오" into "이오".
+        # A small morpheme boundary is natural when spoken and stabilizes G2P.
+        spoken = re.sub(r"([십백천만억조])(?=[일이삼사오육칠팔구])", r"\1 ", spoken)
+    return spoken
 
 
 class TtsError(RuntimeError):

@@ -8,18 +8,21 @@ from .memory import ConversationMemory
 from .models import ChatMessage, LlmResult, is_repetitive_reply
 from .serial_bridge import SerialBridge
 from .tts import TtsEngine, TtsError
+from .tools.router import ToolRouter
 
 
 class ConversationManager:
     def __init__(self, input_provider: InputProvider, llm: LlmClient,
                  tts: TtsEngine, serial_bridge: SerialBridge,
-                 neutral_hold_seconds: float = 1.2) -> None:
+                 neutral_hold_seconds: float = 1.2,
+                 tool_router: ToolRouter | None = None) -> None:
         self._input = input_provider
         self._llm = llm
         self._tts = tts
         self._serial = serial_bridge
         self._memory = ConversationMemory()
         self._neutral_hold = neutral_hold_seconds
+        self._tools = tool_router or ToolRouter()
 
     def run(self) -> None:
         print("Amadeus PC Bridge - 종료하려면 /quit 또는 Ctrl+C")
@@ -32,6 +35,11 @@ class ConversationManager:
                 continue
             turn_started = time.perf_counter()
             history = self._memory.messages()
+            tool_result = self._tools.dispatch(user_text)
+            if tool_result is not None:
+                status = "ok" if tool_result.ok else f"failed: {tool_result.error}"
+                print(f"[tool:{tool_result.name}] {status}")
+                history = history + [ChatMessage("system", tool_result.llm_context())]
             try:
                 result = self._llm.complete(user_text, history)
                 result = self._replace_repetitive_reply(user_text, history, result)
