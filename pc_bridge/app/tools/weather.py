@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
 import math
+import re
 import socket
 import urllib.error
 import urllib.parse
@@ -30,6 +31,7 @@ class WeatherQuery:
     period: str
     include_current: bool
     include_current_sky: bool = False
+    interaction_mode: str = "information_request"
 
 
 class KmaWeatherTool:
@@ -58,13 +60,50 @@ class KmaWeatherTool:
 
     def matches(self, user_text: str) -> bool:
         text = "".join(user_text.lower().split())
-        if "날씨" in text or "기온" in text:
-            return True
-        has_time = any(word in text for word in ("지금", "현재", "오늘", "내일", "저녁", "밤", "아침"))
-        has_weather = any(word in text for word in (
-            "몇도", "비와", "비가", "비올", "눈와", "눈이", "눈올", "추워", "더워",
+        time_context = any(word in text for word in (
+            "지금", "현재", "오늘", "내일", "저녁", "밤", "아침", "오후", "퇴근",
         ))
-        return has_time and has_weather
+        outdoor_context = any(word in text for word in ("밖", "바깥", "외부", "나갈", "외출"))
+        request_intent = any(word in text for word in (
+            "어때", "어떻", "알려", "봐줘", "확인", "궁금", "몇도",
+            "할까", "올까", "오는지", "내릴까", "필요", "챙겨", "입어야",
+        )) or text.endswith(("?", "니", "냐", "지"))
+        observation_intent = any(word in text for word in (
+            "좋네", "좋다", "맑네", "흐리네", "덥네", "춥네", "쌀쌀하네",
+            "따뜻하네", "선선하네", "습하네", "후덥지근",
+        ))
+        conceptual_context = any(word in text for word in (
+            "단어", "뜻", "의미", "차이", "개념", "원리", "설명해",
+        ))
+
+        explicit_subject = any(word in text for word in (
+            "날씨", "기온", "온도", "습도", "강수", "일기예보",
+        ))
+        temperature_expression = any(word in text for word in (
+            "덥", "더워", "더운", "더우", "춥", "추워", "추울", "추우", "쌀쌀", "따뜻",
+            "선선", "습", "후덥", "몇도",
+        ))
+        precipitation_expression = bool(re.search(
+            r"(?:비|눈)(?:가|는|이)?(?:와|오|올|내리|예보|확률)", text
+        ))
+        precipitation_request = any(word in text for word in (
+            "비올까", "비가올까", "비오는지", "비가오는지", "비와?", "비가와?",
+            "눈올까", "눈이올까", "눈오는지", "눈이오는지", "눈와?", "눈이와?",
+            "내릴까", "강수확률", "비예보", "눈예보",
+        ))
+        umbrella_expression = "우산" in text and any(
+            word in text for word in ("필요", "챙", "가져", "써야")
+        )
+
+        if explicit_subject and (request_intent or observation_intent) \
+                and not (conceptual_context and not (time_context or outdoor_context)):
+            return True
+        if (time_context or outdoor_context) and temperature_expression \
+                and (request_intent or observation_intent):
+            return True
+        if precipitation_expression and (time_context or outdoor_context or precipitation_request):
+            return True
+        return umbrella_expression and (time_context or outdoor_context or request_intent)
 
     def run(self, user_text: str) -> ToolResult:
         if not self._service_key:
@@ -75,10 +114,14 @@ class KmaWeatherTool:
             now = self._now()
             query = parse_weather_query(user_text)
             data: dict[str, Any] = {
-                "location": self._location_name,
                 "requested_period": query.period,
+                "interaction_mode": query.interaction_mode,
                 "reference_time": now.isoformat(timespec="minutes"),
             }
+            # A casual weather remark does not need a place name. Omitting it also
+            # prevents the LLM from inventing nearby scenery or activities.
+            if query.interaction_mode != "casual_observation":
+                data["location"] = self._location_name
             if query.include_current:
                 data["current"] = self._current(now, query.include_current_sky)
             if query.period != "now":
@@ -215,7 +258,19 @@ def parse_weather_query(text: str) -> WeatherQuery:
     if "저녁" in compact or "밤" in compact:
         return WeatherQuery("tonight", False)
     current = any(word in compact for word in ("지금", "현재", "몇도"))
-    return WeatherQuery("now" if current else "today", current, current and "날씨" in compact)
+    observation = (
+        "날씨" in compact
+        and any(word in compact for word in (
+            "좋네", "좋다", "좋아", "맑네", "흐리네", "덥네", "춥네",
+            "따뜻", "쌀쌀", "선선", "습하", "후덥",
+        ))
+    )
+    return WeatherQuery(
+        "now" if current else "today",
+        current,
+        current and "날씨" in compact,
+        "casual_observation" if observation else "information_request",
+    )
 
 
 def ultra_release_candidates(now: datetime, count: int = 3) -> list[tuple[str, str]]:

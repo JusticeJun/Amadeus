@@ -42,10 +42,40 @@ def test_routes_weather_questions_without_matching_mood_chat() -> None:
     tool = KmaWeatherTool("key", "Busan", 35.1796, 129.0756)
     for text in (
         "지금 날씨 어때?", "지금 몇 도야?", "오늘 비 와?", "오늘 저녁에 비 와?",
-        "내일 날씨 어때?", "내일 추워?",
+        "내일 날씨 어때?", "내일 추워?", "안녕 크리스 오늘 날씨가 좋네",
+        "안녕 크리스 지금 밖에 날씨 좀 알려줄래",
+        "현재 기온을 다시 확인해 줘",
+        "안녕 크리스 혹시 지금 밖에 좀 더운지 알려줄래",
+        "내일 많이 추울까?",
+        "바깥 온도가 어느 정도인지 봐줄래?",
+        "오늘 오후는 더우려나?",
+        "퇴근할 때쯤 쌀쌀할까?",
+        "밖에 습한지 궁금해",
+        "오늘 비가 오는지 확인해줘",
+        "저녁에는 눈이 올까?",
+        "내일 강수 확률 알려줘",
+        "나갈 때 우산 챙겨야 돼?",
+        "오늘 우산 필요할까?",
+        "지금 바깥은 선선하니?",
+        "오늘은 꽤 덥네",
+        "현재 날씨가 흐리네",
+        "일기예보 좀 봐줘",
     ):
         assert tool.matches(text), text
-    for text in ("오늘 기분 어때?", "너 뭐 좋아해?", "비 오는 노래 좋아해?"):
+    for text in (
+        "오늘 기분 어때?", "너 뭐 좋아해?", "비 오는 노래 좋아해?",
+        "눈 오는 장면이 예쁜 영화 추천해줘",
+        "바람의 노래 들어봤어?",
+        "오늘 매운 음식 먹을까?",
+        "그 사람 성격이 좀 차갑네",
+        "요즘 분위기가 쌀쌀맞아",
+        "비와 눈의 차이가 뭐야?",
+        "온도라는 단어의 뜻이 뭐야?",
+        "내일 일정 알려줘",
+        "지금 뭐 하고 있어?",
+        "우산이라는 소설 알아?",
+        "오늘 기분이 맑아",
+    ):
         assert not tool.matches(text), text
 
 
@@ -58,6 +88,26 @@ def test_query_periods_are_understood() -> None:
     assert parse_weather_query("오늘 날씨 어때?").period == "today"
     assert parse_weather_query("오늘 저녁에 비 와?").period == "tonight"
     assert parse_weather_query("내일 비 와?").period == "tomorrow"
+    observation = parse_weather_query("안녕 크리스 오늘 날씨가 좋네")
+    assert observation.period == "today"
+    assert observation.interaction_mode == "casual_observation"
+
+
+def test_casual_observation_omits_location_that_can_trigger_scene_inference() -> None:
+    tool = KmaWeatherTool(
+        "key", "Busan_Haeundae", 35.1796, 129.0756,
+        opener=lambda *args, **kwargs: FakeResponse([
+            {"fcstDate": "20260822", "fcstTime": "1200", "category": "TMP", "fcstValue": "28"},
+            {"fcstDate": "20260822", "fcstTime": "1200", "category": "POP", "fcstValue": "20"},
+            {"fcstDate": "20260822", "fcstTime": "1200", "category": "PTY", "fcstValue": "0"},
+            {"fcstDate": "20260822", "fcstTime": "1200", "category": "SKY", "fcstValue": "3"},
+        ]),
+        clock=lambda: datetime(2026, 8, 22, 12, 0, tzinfo=KST),
+    )
+    result = tool.run("안녕 크리스 오늘 날씨가 좋네")
+    assert result.ok
+    assert result.data["interaction_mode"] == "casual_observation"
+    assert "location" not in result.data
 
 
 def test_busan_coordinates_convert_to_kma_grid() -> None:

@@ -84,10 +84,10 @@ _NUMBER = r"-?\d+(?:\.\d+)?"
 
 def _normalize_spoken_measurements(text: str) -> str:
     replacements = (
-        (rf"({_NUMBER})\s*[~\-]\s*({_NUMBER})\s*°?C(?![A-Za-z])",
+        (rf"({_NUMBER})\s*[~\-]\s*({_NUMBER})\s*(?:°?C(?![A-Za-z])|도)",
          lambda match: f"{_number_to_korean(match.group(1))} 도에서 "
                        f"{_number_to_korean(match.group(2))} 도"),
-        (rf"({_NUMBER})\s*°?C(?![A-Za-z])",
+        (rf"({_NUMBER})\s*(?:°?C(?![A-Za-z])|도)",
          lambda match: f"{_number_to_korean(match.group(1))} 도"),
         (rf"({_NUMBER})\s*%",
          lambda match: f"{_number_to_korean(match.group(1))} 퍼센트"),
@@ -107,14 +107,14 @@ def _number_to_korean(value: str) -> str:
     negative = value.startswith("-")
     unsigned = value[1:] if negative else value
     integer, dot, fraction = unsigned.partition(".")
-    spoken = _integer_to_korean(int(integer or "0"))
+    spoken = _integer_to_korean(int(integer or "0"), speech_spacing=True)
     if dot:
         digits = "영일이삼사오육칠팔구"
         spoken += " 점 " + " ".join(digits[int(digit)] for digit in fraction)
     return ("마이너스 " if negative else "") + spoken
 
 
-def _integer_to_korean(value: int) -> str:
+def _integer_to_korean(value: int, *, speech_spacing: bool = False) -> str:
     if value == 0:
         return "영"
     digits = "영일이삼사오육칠팔구"
@@ -139,7 +139,12 @@ def _integer_to_korean(value: int) -> str:
                 group_parts.append(digits[digit])
             group_parts.append(small_units[position])
         parts.append("".join(group_parts) + large_units[group_index])
-    return "".join(parts)
+    spoken = "".join(parts)
+    if speech_spacing:
+        # GPT-SoVITS can collapse a glued form such as "이십오" into "이오".
+        # A small morpheme boundary is natural when spoken and stabilizes G2P.
+        spoken = re.sub(r"([십백천만억조])(?=[일이삼사오육칠팔구])", r"\1 ", spoken)
+    return spoken
 
 
 class TtsError(RuntimeError):
