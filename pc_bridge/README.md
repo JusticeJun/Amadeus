@@ -132,6 +132,25 @@ pc_bridge\.venv\Scripts\python.exe -m compileall -q pc_bridge\app pc_bridge\tool
 pc_bridge\.venv\Scripts\python.exe -m pytest -q pc_bridge\tests
 ```
 
+## KMA weather tool
+
+Apply for **기상청_단기예보 조회서비스** on data.go.kr and add its service key,
+the fixed device location, and WGS84 coordinates to `pc_bridge/.env`:
+
+```dotenv
+KMA_SERVICE_KEY=your_service_key
+AMADEUS_LOCATION_NAME=Busan
+AMADEUS_LATITUDE=35.1796
+AMADEUS_LONGITUDE=129.0756
+WEATHER_TIMEOUT_SECONDS=8
+```
+
+Run the bridge normally. Weather questions such as `지금 날씨 어때?`,
+`오늘 저녁에 비 와?`, and `내일 날씨 어때?` use the KMA tool. Ordinary
+conversation bypasses it. The tool returns compact facts only; Groq still writes
+Chris's final reply and selects the emotion. See `docs/tools.md` for the extension
+contract used by future tools.
+
 ## Common problems
 
 - `COM3 access denied`: close PlatformIO Monitor or another serial program.

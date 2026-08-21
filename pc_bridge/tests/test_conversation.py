@@ -4,6 +4,8 @@ from app.conversation import ConversationManager
 from app.llm import LlmClient
 from app.models import LlmResult
 from app.tts import TtsEngine
+from app.tools.base import ToolResult
+from app.tools.router import ToolRouter
 
 
 class SequenceInput:
@@ -33,6 +35,25 @@ class EchoThenRewriteLlm(LlmClient):
         if self.calls == 1:
             return LlmResult(reply=user_text)
         return LlmResult(reply="좋게 들리셨다니 다행이에요.", emotion="happy")
+
+
+class CapturingLlm(LlmClient):
+    def __init__(self) -> None:
+        self.history = []
+
+    def complete(self, user_text, history):
+        self.history = history
+        return LlmResult(reply="오늘은 비가 올 수 있겠네.")
+
+
+class StubWeatherTool:
+    name = "weather"
+
+    def matches(self, user_text: str) -> bool:
+        return "날씨" in user_text
+
+    def run(self, user_text: str) -> ToolResult:
+        return ToolResult("weather", True, {"location": "Busan", "temperature_c": 27})
 
 
 class CapturingTts(TtsEngine):
@@ -86,3 +107,18 @@ def test_input_activity_controls_listening_state() -> None:
 
     listening_index = serial.states.index("listening")
     assert serial.states[listening_index + 1] == "neutral"
+
+
+def test_tool_facts_are_passed_to_llm_without_becoming_the_reply() -> None:
+    llm = CapturingLlm()
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["오늘 날씨 어때?", "/quit"]), llm, tts, CapturingSerial(),
+        neutral_hold_seconds=0, tool_router=ToolRouter([StubWeatherTool()]),
+    )
+
+    manager.run()
+
+    context = [item.content for item in llm.history if item.role == "system"]
+    assert any('"temperature_c":27' in item for item in context)
+    assert tts.results[0].reply == "오늘은 비가 올 수 있겠네."

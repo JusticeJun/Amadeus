@@ -25,6 +25,16 @@ def _bool(name: str, default: bool) -> bool:
     return default if value is None else value.lower() in {"1", "true", "yes", "on"}
 
 
+def _optional_float(name: str) -> float | None:
+    value = os.getenv(name, "").strip()
+    if not value:
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 @dataclass(frozen=True)
 class Settings:
     mode: str
@@ -58,6 +68,11 @@ class Settings:
     gpt_sovits_top_k: int
     gpt_sovits_top_p: float
     gpt_sovits_temperature: float
+    kma_service_key: str = ""
+    amadeus_location_name: str = "Busan"
+    amadeus_latitude: float | None = None
+    amadeus_longitude: float | None = None
+    weather_timeout_seconds: float = 8.0
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -94,4 +109,9 @@ class Settings:
             gpt_sovits_top_k=int(os.getenv("GPT_SOVITS_TOP_K", "5")),
             gpt_sovits_top_p=float(os.getenv("GPT_SOVITS_TOP_P", "0.85")),
             gpt_sovits_temperature=float(os.getenv("GPT_SOVITS_TEMPERATURE", "0.7")),
+            kma_service_key=os.getenv("KMA_SERVICE_KEY", ""),
+            amadeus_location_name=os.getenv("AMADEUS_LOCATION_NAME", "Busan"),
+            amadeus_latitude=_optional_float("AMADEUS_LATITUDE"),
+            amadeus_longitude=_optional_float("AMADEUS_LONGITUDE"),
+            weather_timeout_seconds=float(os.getenv("WEATHER_TIMEOUT_SECONDS", "8")),
         )
