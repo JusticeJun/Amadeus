@@ -8,10 +8,13 @@ from typing import Any
 
 
 ALLOWED_EMOTIONS = frozenset(
-    {"neutral", "happy", "shy", "pout", "surprised", "thinking", "sleep", "listening"}
+    {
+        "neutral", "answering", "happy", "angry", "shy", "sad",
+        "wondering", "sleep", "listening",
+    }
 )
 RESPONSE_EMOTIONS = frozenset(
-    {"neutral", "happy", "shy", "pout", "surprised", "thinking"}
+    {"answering", "happy", "angry", "shy", "sad", "wondering"}
 )
 FALLBACK_REPLY = "잠시 생각을 정리하지 못했어요."
 
@@ -43,7 +46,7 @@ class SpeechStyle:
 @dataclass(frozen=True)
 class LlmResult:
     reply: str
-    emotion: str = "neutral"
+    emotion: str = "answering"
     speech_style: SpeechStyle = field(default_factory=SpeechStyle)
 
     @classmethod
@@ -74,9 +77,9 @@ class LlmResult:
         if not reply:
             reply = FALLBACK_REPLY
         reply = normalize_reply(reply) or FALLBACK_REPLY
-        emotion = str(payload.get("emotion") or "neutral").strip().lower()
+        emotion = str(payload.get("emotion") or "answering").strip().lower()
         if emotion not in RESPONSE_EMOTIONS:
-            emotion = "neutral"
+            emotion = "answering"
         return cls(reply=reply, emotion=emotion,
                    speech_style=SpeechStyle.from_mapping(payload.get("speech_style")))
 

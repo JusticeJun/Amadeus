@@ -8,9 +8,10 @@ class AssetManager {
  public:
   bool begin();
   bool drawRgb565(DisplayManager& display, const char* path);
+  uint16_t* loadRgb565Asset(const char* path);
   const uint16_t* imagePixels() const;
 
  private:
-  bool loadRgb565(const char* path);
+  bool loadRgb565(const char* path, uint16_t*& destination);
   uint16_t* imagePixels_ = nullptr;
 };

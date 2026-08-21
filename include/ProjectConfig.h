@@ -25,4 +25,9 @@ constexpr uint8_t SYNC_TEAR_MAX_HEIGHT = 22;
 constexpr uint8_t SYNC_TEAR_MIN_SHIFT = 18;
 constexpr uint8_t SYNC_TEAR_MAX_SHIFT = 48;
 }  // namespace Crt
+
+namespace HappyHearts {
+constexpr uint16_t FRAME_INTERVAL_MS = 800;
+constexpr int16_t DIRTY_SIZE = 48;
+}  // namespace HappyHearts
 }  // namespace ProjectConfig

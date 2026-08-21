@@ -8,7 +8,7 @@ import pytest
 
 from app.config import Settings
 from app.llm import GroqLlmClient, LlmError
-from app.models import ChatMessage
+from app.models import ChatMessage, LlmResult
 
 
 class FakeResponse:
@@ -79,7 +79,11 @@ def test_request_uses_strict_schema_and_history(tmp_path: Path) -> None:
     assert captured["body"]["include_reasoning"] is False
     schema = captured["body"]["response_format"]["json_schema"]
     assert schema["strict"] is True
-    assert "sleep" not in schema["schema"]["properties"]["emotion"]["enum"]
+    emotion_values = schema["schema"]["properties"]["emotion"]["enum"]
+    assert "sleep" not in emotion_values
+    assert "thinking" not in emotion_values
+    assert "answering" in emotion_values
+    assert "wondering" in emotion_values
     assert captured["body"]["messages"][-2]["content"] == "어서 오세요."
     assert captured["timeout"] == 3
     assert client.last_metrics.prompt_tokens == 42
@@ -116,7 +120,7 @@ def test_plain_text_from_schema_failure_is_recovered(tmp_path: Path) -> None:
     result = client.complete("말 좀 해 봐", [])
 
     assert result.reply == "말씀해 보세요. 듣고 있어요."
-    assert result.emotion == "neutral"
+    assert result.emotion == "answering"
     assert client.last_metrics.recovered_structured_output is True
 
 
@@ -125,7 +129,7 @@ def test_tool_call_from_schema_failure_is_recovered(tmp_path: Path) -> None:
         "name": "amadeus_reply",
         "arguments": {
             "reply": "그 이야기는 여기까지만 할게요. 다른 얘기해요.",
-            "emotion": "pout",
+            "emotion": "angry",
             "speech_style": {"speed": 1, "pitch": 0, "energy": 1},
         },
     }, ensure_ascii=False)
@@ -142,7 +146,7 @@ def test_tool_call_from_schema_failure_is_recovered(tmp_path: Path) -> None:
     result = client.complete("테스트", [])
 
     assert result.reply == "그 이야기는 여기까지만 할게요. 다른 얘기해요."
-    assert result.emotion == "pout"
+    assert result.emotion == "angry"
     assert client.last_metrics.recovered_structured_output is True
 
 

@@ -14,6 +14,7 @@ DisplayManager display;
 AssetManager assets;
 CrtEffect crtEffect;
 CharacterController character;
+CharacterAssets characterAssets;
 
 void printBytes(const char* label, uint64_t bytes) {
   Serial.printf("%-24s %llu bytes (%.2f MiB)\n", label,
@@ -66,13 +67,36 @@ void setup() {
     Serial.println("LittleFS mount failed. Upload the filesystem image separately.");
     return;
   }
-  Serial.println("Drawing /neutral_default.rgb565...");
-  if (assets.drawRgb565(display, "/neutral_default.rgb565")) {
+  Serial.println("Drawing /neutral.rgb565...");
+  if (assets.drawRgb565(display, "/neutral.rgb565")) {
     Serial.println("Character image draw complete.");
   } else {
     Serial.println("Character image draw failed.");
     return;
   }
+  Serial.println("Loading character states into PSRAM...");
+  characterAssets.neutral = assets.imagePixels();
+  characterAssets.listening = assets.loadRgb565Asset("/listening.rgb565");
+  characterAssets.answering1 = assets.loadRgb565Asset("/answering1.rgb565");
+  characterAssets.answering2 = assets.loadRgb565Asset("/answering2.rgb565");
+  characterAssets.answering3 = assets.loadRgb565Asset("/answering3.rgb565");
+  characterAssets.happyFrameA = assets.loadRgb565Asset("/happy_hearts_a.rgb565");
+  characterAssets.happyFrameB = assets.loadRgb565Asset("/happy_hearts_b.rgb565");
+  characterAssets.shy = assets.loadRgb565Asset("/shy.rgb565");
+  characterAssets.angry = assets.loadRgb565Asset("/angry.rgb565");
+  characterAssets.sad = assets.loadRgb565Asset("/sad.rgb565");
+  characterAssets.wondering = assets.loadRgb565Asset("/wondering.rgb565");
+  if (characterAssets.listening == nullptr ||
+      characterAssets.answering1 == nullptr ||
+      characterAssets.answering2 == nullptr ||
+      characterAssets.answering3 == nullptr ||
+      characterAssets.happyFrameA == nullptr || characterAssets.happyFrameB == nullptr ||
+      characterAssets.shy == nullptr || characterAssets.angry == nullptr ||
+      characterAssets.sad == nullptr || characterAssets.wondering == nullptr) {
+    Serial.println("Character state asset load failed.");
+    return;
+  }
+  Serial.println("Character state assets loaded.");
 
   CrtEffectConfig crtConfig;
   crtConfig.enabled = ProjectConfig::Crt::ENABLED;
@@ -98,7 +122,8 @@ void setup() {
   crtConfig.syncTearMaxShift = ProjectConfig::Crt::SYNC_TEAR_MAX_SHIFT;
   if (crtEffect.begin(display, assets.imagePixels(), crtConfig)) {
     Serial.println("Ambient CRT effect started.");
-    character.begin(crtEffect);
+    character.begin(crtEffect, characterAssets,
+                    ProjectConfig::HappyHearts::FRAME_INTERVAL_MS);
     Serial.println("PC bridge protocol ready.");
   } else {
     Serial.println("Ambient CRT effect failed to start.");

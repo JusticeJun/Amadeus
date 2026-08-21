@@ -48,7 +48,7 @@ GROQ_API_KEY=your_key_here
 GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-The default model uses low reasoning effort to reduce spoken-response latency. Each turn prints LLM time, TTS time, time-to-audio, and token usage. Override `GROQ_REASONING_EFFORT` only after comparing latency and answer quality.
+The response model uses low reasoning effort to reduce spoken-response latency. A single request generates both the reply and its emotion, and each turn prints model time, TTS time, time-to-audio, and token usage. Override `GROQ_REASONING_EFFORT` only after comparing latency and response quality.
 
 Never put the key in source code, `platformio.ini`, screenshots, commits, or issue reports. The API URL, model and timeout can all be changed in `.env`. HTTP errors, timeouts, rate limits, and malformed replies are reported without terminating the interactive bridge.
 
@@ -117,7 +117,7 @@ AMADEUS_SERIAL_PORT=COM3
 AMADEUS_SERIAL_BAUD=115200
 ```
 
-Or run once with `--serial`. Change `AMADEUS_SERIAL_PORT` if Windows assigns a different port. The state sequence is listening -> thinking -> response emotion -> neutral; `/quit` sends sleep. Missing emotion assets safely keep the neutral image.
+Or run once with `--serial`. Change `AMADEUS_SERIAL_PORT` if Windows assigns a different port. The display stays neutral while idle, switches to listening only while input is active, then shows `answering`, `happy`, `angry`, `shy`, `sad`, or `wondering` for the reply before returning to neutral. `/quit` sends sleep.
 
 Protocol diagnostic (close PlatformIO Monitor first):
 

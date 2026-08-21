@@ -15,26 +15,26 @@ def test_valid_json_and_clamping() -> None:
     assert result.speech_style.energy == 0.7
 
 
-def test_invalid_emotion_falls_back_to_neutral() -> None:
-    result = LlmResult.parse('{"reply":"네.","emotion":"angry"}')
-    assert result.emotion == "neutral"
+def test_invalid_emotion_falls_back_to_answering() -> None:
+    result = LlmResult.parse('{"reply":"네.","emotion":"surprised"}')
+    assert result.emotion == "answering"
 
 
 def test_malformed_json_recovers_text() -> None:
     result = LlmResult.parse("그냥 대답입니다.")
     assert result.reply == "그냥 대답입니다."
-    assert result.emotion == "neutral"
+    assert result.emotion == "answering"
 
 
 def test_device_only_state_is_not_accepted_as_reply_emotion() -> None:
     result = LlmResult.parse('{"reply":"잘 자요.","emotion":"sleep"}')
-    assert result.emotion == "neutral"
+    assert result.emotion == "answering"
 
 
 def test_reply_is_cleaned_and_safely_shortened() -> None:
     result = LlmResult.parse(json.dumps({
         "reply": "**알겠어요.** " + ("아주 긴 설명 " * 50),
-        "emotion": "neutral",
+        "emotion": "answering",
     }))
     assert "*" not in result.reply
     assert len(result.reply) <= 651
@@ -43,7 +43,7 @@ def test_reply_is_cleaned_and_safely_shortened() -> None:
 def test_reply_is_limited_to_five_spoken_sentences() -> None:
     result = LlmResult.parse(json.dumps({
         "reply": "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다. 다섯째 문장입니다. 여섯째 문장입니다.",
-        "emotion": "neutral",
+        "emotion": "answering",
     }))
     assert result.reply == "첫 문장입니다. 둘째 문장입니다. 셋째 문장입니다. 넷째 문장입니다. 다섯째 문장입니다."
 

@@ -24,13 +24,12 @@ class ConversationManager:
     def run(self) -> None:
         print("Amadeus PC Bridge - 종료하려면 /quit 또는 Ctrl+C")
         while True:
-            self._serial.send_state("listening")
-            user_text = self._input.read()
+            self._serial.send_state("neutral")
+            user_text = self._input.read(self._set_input_activity)
             if user_text is None or user_text.lower() in {"/quit", "/exit"}:
                 break
             if not user_text:
                 continue
-            self._serial.send_state("thinking")
             turn_started = time.perf_counter()
             history = self._memory.messages()
             try:
@@ -67,6 +66,9 @@ class ConversationManager:
             time.sleep(self._neutral_hold)
             self._serial.send_state("neutral")
         self._serial.send_state("sleep")
+
+    def _set_input_activity(self, active: bool) -> None:
+        self._serial.send_state("listening" if active else "neutral")
 
     def _replace_repetitive_reply(
         self,

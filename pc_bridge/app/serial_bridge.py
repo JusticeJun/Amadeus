@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 from .models import ALLOWED_EMOTIONS
@@ -25,6 +26,11 @@ class SerialBridge:
         try:
             import serial
             self._serial = serial.Serial(self._port, self._baud, timeout=0.2)
+            # Opening a CH343 UART commonly resets the ESP32. Wait until setup()
+            # has mounted LittleFS and registered the command handler.
+            time.sleep(3.0)
+            self._serial.reset_input_buffer()
+            print(f"[serial] {self._port} 연결 완료 ({self._baud} baud)")
         except Exception as exc:
             self._serial = None
             print(f"[serial] {self._port}를 열지 못했습니다: {exc}")
@@ -36,6 +42,7 @@ class SerialBridge:
         try:
             self._serial.write(serialize_state(emotion))
             self._serial.flush()
+            print(f"[serial] state -> {emotion}")
         except Exception as exc:
             print(f"[serial] 상태 전송 실패: {exc}")
 
