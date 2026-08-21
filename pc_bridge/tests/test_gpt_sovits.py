@@ -3,7 +3,7 @@ from pathlib import Path
 
 from app.config import Settings
 from app.models import LlmResult
-from app.tts import GptSovitsEngine, create_tts_engine
+from app.tts import GptSovitsEngine, create_tts_engine, normalize_tts_text
 
 
 class FakeResponse:
@@ -116,6 +116,19 @@ def test_common_llm_unicode_symbols_are_normalized_for_tts(tmp_path: Path, monke
         LlmResult(reply="ＡＰＩ\u200b • A→B, 3×4=12, x≤10, 거의≈같아 😊 日本語")
     )
     assert captured["body"]["text"] == "API - A -> B, 3 x 4=12, x <= 10, 거의 ~ 같아 日本語"
+
+
+def test_weather_measurements_are_normalized_for_korean_speech() -> None:
+    assert normalize_tts_text(
+        "기온 26.4°C, 습도 92%, 바람 2m/s, 강수량 0.5mm야."
+    ) == (
+        "기온 이십육 점 사 도, 습도 구십이 퍼센트, "
+        "바람 초속 이 미터, 강수량 영 점 오 밀리미터야."
+    )
+
+
+def test_temperature_range_is_spoken_naturally() -> None:
+    assert normalize_tts_text("내일은 25~31°C야.") == "내일은 이십오 도에서 삼십일 도야."
 
 
 def test_explicit_auxiliary_reference_is_selected(tmp_path: Path, monkeypatch) -> None:
