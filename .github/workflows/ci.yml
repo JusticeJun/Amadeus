@@ -38,7 +38,7 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Run Ruff
-        run: python -m ruff check app tests tools
+        run: python -m ruff check app evaluation tests tools
 
       - name: Run tests
         run: python -m pytest
