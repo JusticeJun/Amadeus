@@ -61,6 +61,13 @@ def _print_report(report) -> None:
             f"category {category}: exact={metrics.exact_matches}/{metrics.scored} "
             f"mismatches={metrics.mismatches}"
         )
+    for name, metrics in report.slice_metrics.items():
+        print(f"slice {name}: cases={metrics.cases} scored={metrics.scored_cases}")
+        for tool, tool_metrics in metrics.tool_metrics.items():
+            print(
+                f"  {tool}: precision={tool_metrics.precision:.3f} "
+                f"recall={tool_metrics.recall:.3f} f1={tool_metrics.f1:.3f}"
+            )
     print(
         f"latency: mean={report.latency.mean_ms:.4f}ms "
         f"p95={report.latency.p95_ms:.4f}ms max={report.latency.max_ms:.4f}ms "

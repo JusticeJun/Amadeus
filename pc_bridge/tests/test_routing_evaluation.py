@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from evaluation import RoutingCase, evaluate_routing, load_corpora, load_corpus
+from evaluation import (
+    RoutingCase,
+    RoutingContext,
+    evaluate_routing,
+    load_corpora,
+    load_corpus,
+)
 
 
 CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "cases" / "weather.jsonl"
@@ -16,7 +22,8 @@ def test_corpus_covers_semantic_boundary_categories() -> None:
     categories = {case.category for case in cases}
     assert {
         "explicit_positive", "negative", "hard_negative", "implicit_positive",
-        "mixed_intent", "regression", "context_required", "ambiguous",
+        "mixed_intent", "regression", "context_required", "unsupported_capability",
+        "ambiguous",
     } <= categories
     labels = {case.text: case.expected_tools for case in cases}
     assert labels["오늘 날씨 어때?"] == frozenset({"weather"})
@@ -25,6 +32,9 @@ def test_corpus_covers_semantic_boundary_categories() -> None:
     assert labels["'추워'와 '쌀쌀해'의 차이가 뭐야?"] == frozenset()
     assert labels["오늘 날씨 좋네."] == frozenset()
     assert labels["오늘 날씨 좋지?"] == frozenset({"weather"})
+    assert labels["오늘 선크림 발라야 할까?"] == frozenset({"uv"})
+    assert labels["어제 날씨 어땠어?"] == frozenset({"weather_history"})
+    assert labels["태풍 지금 어디쯤이야?"] == frozenset({"typhoon_tracking"})
     assert any(case.expected_tools is None for case in cases)
     assert any(case.context for case in cases)
     assert any("minimal_pair" in case.tags for case in cases)
@@ -65,6 +75,34 @@ def test_evaluator_calculates_multilabel_errors_and_excludes_ambiguous_cases() -
     assert [item.case_id for item in report.false_positives] == ["fp"]
     assert [item.case_id for item in report.false_negatives] == ["fn"]
     assert report.latency.samples == len(cases)
+
+
+def test_report_separates_standard_context_unsupported_and_ambiguous_slices() -> None:
+    cases = [
+        RoutingCase("standard", "today weather", frozenset({"weather"}), "explicit_positive"),
+        RoutingCase(
+            "context", "tomorrow?", frozenset({"weather"}), "context_required",
+            context=(RoutingContext("user", "It is raining today."),),
+        ),
+        RoutingCase(
+            "unsupported", "UV now", frozenset({"uv"}), "unsupported_capability",
+        ),
+        RoutingCase("ambiguous", "Is it okay?", None, "ambiguous"),
+    ]
+    predictions = {"today weather": {"weather"}}
+    report = evaluate_routing(
+        cases,
+        lambda case: predictions.get(case.text, set()),
+        latency_iterations=1,
+    )
+    assert report.slice_metrics["standard"].cases == 1
+    assert report.slice_metrics["standard"].tool_metrics["weather"].recall == 1.0
+    assert report.slice_metrics["context_required"].cases == 1
+    assert report.slice_metrics["context_required"].tool_metrics["weather"].recall == 0.0
+    assert report.slice_metrics["unsupported_capability"].cases == 1
+    assert report.slice_metrics["unsupported_capability"].tool_metrics["uv"].recall == 0.0
+    assert report.slice_metrics["ambiguous"].cases == 1
+    assert report.slice_metrics["ambiguous"].scored_cases == 0
 
 
 def test_corpus_loader_rejects_duplicate_ids(tmp_path: Path) -> None:

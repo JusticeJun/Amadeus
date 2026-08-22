@@ -66,7 +66,7 @@
 {"id":"weather_hard_negative_026","text":"요즘 내 인생에 먹구름이 낀 것 같아.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
 {"id":"weather_hard_negative_027","text":"우리 사이가 요즘 쌀쌀해진 것 같아.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
 {"id":"weather_hard_negative_028","text":"우산이라는 제목의 소설 알아?","expected_tools":[],"category":"hard_negative"}
-{"id":"weather_hard_negative_029","text":"오늘 선크림 발라야 할까?","expected_tools":[],"category":"hard_negative","reason":"This requires a future UV capability rather than the current Weather capability."}
+{"id":"weather_unsupported_001","text":"오늘 선크림 발라야 할까?","expected_tools":["uv"],"category":"unsupported_capability","reason":"A useful answer requires live UV data, which the current Weather capability does not provide."}
 {"id":"weather_hard_negative_030","text":"미세먼지는 왜 생겨?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require live air-quality data."}
 {"id":"weather_hard_negative_031","text":"자외선이 피부에 왜 안 좋아?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require a live UV lookup."}
 {"id":"weather_negative_001","text":"오늘 기분 어때?","expected_tools":[],"category":"negative"}
@@ -101,5 +101,5 @@
 {"id":"weather_ambiguous_005","text":"아 날씨 진짜...","expected_tools":null,"category":"ambiguous","reason":"An incomplete reaction does not establish whether lookup is requested."}
 {"id":"weather_ambiguous_006","text":"밖에 괜찮아?","expected_tools":null,"category":"ambiguous","reason":"Could concern weather, safety, noise, or another external condition."}
 {"id":"weather_ambiguous_007","text":"밖에 춥다던데.","expected_tools":null,"category":"ambiguous","tags":["minimal_pair","statement_request"],"reason":"The user may be sharing hearsay or implicitly seeking confirmation."}
-{"id":"weather_ambiguous_008","text":"어제 날씨 어땠어?","expected_tools":null,"category":"ambiguous","tags":["unsupported_capability","temporal"],"reason":"Live data is requested, but the current Weather capability does not support historical lookup."}
-{"id":"weather_ambiguous_009","text":"태풍 지금 어디쯤이야?","expected_tools":null,"category":"ambiguous","tags":["unsupported_capability"],"reason":"This needs live external data outside the current short-term forecast capability."}
+{"id":"weather_unsupported_002","text":"어제 날씨 어땠어?","expected_tools":["weather_history"],"category":"unsupported_capability","tags":["temporal"],"reason":"Historical weather data is required, but the current Weather capability only supports current and forecast data."}
+{"id":"weather_unsupported_003","text":"태풍 지금 어디쯤이야?","expected_tools":["typhoon_tracking"],"category":"unsupported_capability","reason":"Live typhoon tracking data is required and is outside the current short-term forecast capability."}

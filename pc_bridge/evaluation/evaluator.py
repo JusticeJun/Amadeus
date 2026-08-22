@@ -65,11 +65,19 @@ class CategoryMetrics:
 
 
 @dataclass(frozen=True)
+class SliceMetrics:
+    cases: int
+    scored_cases: int
+    tool_metrics: dict[str, ToolMetrics]
+
+
+@dataclass(frozen=True)
 class RoutingReport:
     scored_cases: int
     ambiguous_cases: int
     tool_metrics: dict[str, ToolMetrics]
     category_metrics: dict[str, CategoryMetrics]
+    slice_metrics: dict[str, SliceMetrics]
     false_positives: tuple[RoutingMismatch, ...]
     false_negatives: tuple[RoutingMismatch, ...]
     latency: LatencyMetrics
@@ -162,16 +170,9 @@ def evaluate_routing(
         for case, prediction in zip(case_list, predictions)
         if case.expected_tools is not None
     ]
-    tools = sorted({
-        tool
-        for case, prediction in scored
-        for tool in (case.expected_tools or frozenset()) | prediction
-    })
-    metrics = {
-        tool: _metrics_for_tool(tool, scored)
-        for tool in tools
-    }
+    metrics = _all_tool_metrics(scored)
     category_metrics = _category_metrics(scored)
+    slice_metrics = _slice_metrics(case_list, predictions)
 
     false_positives: list[RoutingMismatch] = []
     false_negatives: list[RoutingMismatch] = []
@@ -195,10 +196,55 @@ def evaluate_routing(
         ambiguous_cases=len(case_list) - len(scored),
         tool_metrics=metrics,
         category_metrics=category_metrics,
+        slice_metrics=slice_metrics,
         false_positives=tuple(false_positives),
         false_negatives=tuple(false_negatives),
         latency=_latency_metrics(latency_samples),
     )
+
+
+def _all_tool_metrics(
+    scored: list[tuple[RoutingCase, frozenset[str]]],
+) -> dict[str, ToolMetrics]:
+    tools = sorted({
+        tool
+        for case, prediction in scored
+        for tool in (case.expected_tools or frozenset()) | prediction
+    })
+    return {tool: _metrics_for_tool(tool, scored) for tool in tools}
+
+
+def _slice_metrics(
+    cases: list[RoutingCase],
+    predictions: list[frozenset[str]],
+) -> dict[str, SliceMetrics]:
+    grouped: dict[str, list[tuple[RoutingCase, frozenset[str]]]] = {
+        "standard": [],
+        "context_required": [],
+        "unsupported_capability": [],
+        "ambiguous": [],
+    }
+    for case, prediction in zip(cases, predictions):
+        grouped[_slice_for(case)].append((case, prediction))
+    result: dict[str, SliceMetrics] = {}
+    for name, entries in grouped.items():
+        scored = [(case, prediction) for case, prediction in entries if case.expected_tools is not None]
+        result[name] = SliceMetrics(
+            cases=len(entries),
+            scored_cases=len(scored),
+            tool_metrics=_all_tool_metrics(scored),
+        )
+    return result
+
+
+def _slice_for(case: RoutingCase) -> str:
+    if case.expected_tools is None or case.category == "ambiguous":
+        return "ambiguous"
+    if case.category == "unsupported_capability" or "unsupported_capability" in case.tags:
+        return "unsupported_capability"
+    if case.category == "context_required" or case.context:
+        return "context_required"
+    return "standard"
 
 
 def _category_metrics(
