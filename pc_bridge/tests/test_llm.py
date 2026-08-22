@@ -8,7 +8,7 @@ import pytest
 
 from app.config import Settings
 from app.llm import GroqLlmClient, LlmError
-from app.models import ChatMessage, LlmResult
+from app.models import ChatMessage
 
 
 class FakeResponse:
