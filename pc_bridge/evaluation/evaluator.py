@@ -8,7 +8,10 @@ import time
 from typing import Callable, Iterable
 
 
-ToolPredictor = Callable[[str], set[str]]
+@dataclass(frozen=True)
+class RoutingContext:
+    role: str
+    content: str
 
 
 @dataclass(frozen=True)
@@ -17,7 +20,13 @@ class RoutingCase:
     text: str
     expected_tools: frozenset[str] | None
     category: str
-    note: str = ""
+    tags: frozenset[str] = frozenset()
+    intent: str = ""
+    reason: str = ""
+    context: tuple[RoutingContext, ...] = ()
+
+
+ToolPredictor = Callable[[RoutingCase], set[str]]
 
 
 @dataclass(frozen=True)
@@ -49,10 +58,18 @@ class LatencyMetrics:
 
 
 @dataclass(frozen=True)
+class CategoryMetrics:
+    scored: int
+    exact_matches: int
+    mismatches: int
+
+
+@dataclass(frozen=True)
 class RoutingReport:
     scored_cases: int
     ambiguous_cases: int
     tool_metrics: dict[str, ToolMetrics]
+    category_metrics: dict[str, CategoryMetrics]
     false_positives: tuple[RoutingMismatch, ...]
     false_negatives: tuple[RoutingMismatch, ...]
     latency: LatencyMetrics
@@ -78,6 +95,8 @@ def load_corpus(path: Path) -> list[RoutingCase]:
             category = str(item["category"]).strip()
             raw_tools = item.get("expected_tools")
             expected = None if raw_tools is None else frozenset(str(tool) for tool in raw_tools)
+            raw_tags = item.get("tags") or []
+            raw_context = item.get("context") or []
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError(f"invalid corpus entry at line {line_number}") from exc
         if not case_id or not text or not category:
@@ -86,16 +105,44 @@ def load_corpus(path: Path) -> list[RoutingCase]:
             raise ValueError(f"duplicate corpus id: {case_id}")
         if raw_tools is not None and not isinstance(raw_tools, list):
             raise ValueError(f"expected_tools must be a list or null at line {line_number}")
+        if not isinstance(raw_tags, list) or not isinstance(raw_context, list):
+            raise ValueError(f"tags and context must be lists at line {line_number}")
+        try:
+            context = tuple(
+                RoutingContext(str(turn["role"]).strip(), str(turn["content"]).strip())
+                for turn in raw_context
+            )
+        except (KeyError, TypeError) as exc:
+            raise ValueError(f"invalid context at line {line_number}") from exc
+        if any(not turn.role or not turn.content for turn in context):
+            raise ValueError(f"empty context field at line {line_number}")
         seen_ids.add(case_id)
         cases.append(RoutingCase(
             case_id=case_id,
             text=text,
             expected_tools=expected,
             category=category,
-            note=str(item.get("note") or "").strip(),
+            tags=frozenset(str(tag) for tag in raw_tags),
+            intent=str(item.get("intent") or "").strip(),
+            reason=str(item.get("reason") or "").strip(),
+            context=context,
         ))
     if not cases:
         raise ValueError("routing corpus is empty")
+    return cases
+
+
+def load_corpora(paths: Iterable[Path]) -> list[RoutingCase]:
+    cases: list[RoutingCase] = []
+    seen_ids: set[str] = set()
+    for path in paths:
+        for case in load_corpus(path):
+            if case.case_id in seen_ids:
+                raise ValueError(f"duplicate corpus id across files: {case.case_id}")
+            seen_ids.add(case.case_id)
+            cases.append(case)
+    if not cases:
+        raise ValueError("no routing corpora were loaded")
     return cases
 
 
@@ -109,7 +156,7 @@ def evaluate_routing(
     if latency_iterations < 1:
         raise ValueError("latency_iterations must be positive")
 
-    predictions = [frozenset(predictor(case.text)) for case in case_list]
+    predictions = [frozenset(predictor(case)) for case in case_list]
     scored = [
         (case, prediction)
         for case, prediction in zip(case_list, predictions)
@@ -124,6 +171,7 @@ def evaluate_routing(
         tool: _metrics_for_tool(tool, scored)
         for tool in tools
     }
+    category_metrics = _category_metrics(scored)
 
     false_positives: list[RoutingMismatch] = []
     false_negatives: list[RoutingMismatch] = []
@@ -146,10 +194,23 @@ def evaluate_routing(
         scored_cases=len(scored),
         ambiguous_cases=len(case_list) - len(scored),
         tool_metrics=metrics,
+        category_metrics=category_metrics,
         false_positives=tuple(false_positives),
         false_negatives=tuple(false_negatives),
         latency=_latency_metrics(latency_samples),
     )
+
+
+def _category_metrics(
+    scored: list[tuple[RoutingCase, frozenset[str]]],
+) -> dict[str, CategoryMetrics]:
+    grouped: dict[str, list[bool]] = {}
+    for case, prediction in scored:
+        grouped.setdefault(case.category, []).append(prediction == case.expected_tools)
+    return {
+        category: CategoryMetrics(len(results), sum(results), len(results) - sum(results))
+        for category, results in sorted(grouped.items())
+    }
 
 
 def _metrics_for_tool(
@@ -182,7 +243,7 @@ def _measure_latency(
     for _ in range(iterations):
         for case in cases:
             started = time.perf_counter_ns()
-            predictor(case.text)
+            predictor(case)
             samples.append((time.perf_counter_ns() - started) / 1_000_000)
     return samples
 

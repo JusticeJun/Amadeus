@@ -1,5 +1,19 @@
 """Offline evaluation utilities for semantic tool routing."""
 
-from .evaluator import RoutingCase, RoutingReport, evaluate_routing, load_corpus
+from .evaluator import (
+    RoutingCase,
+    RoutingContext,
+    RoutingReport,
+    evaluate_routing,
+    load_corpora,
+    load_corpus,
+)
 
-__all__ = ["RoutingCase", "RoutingReport", "evaluate_routing", "load_corpus"]
+__all__ = [
+    "RoutingCase",
+    "RoutingContext",
+    "RoutingReport",
+    "evaluate_routing",
+    "load_corpora",
+    "load_corpus",
+]

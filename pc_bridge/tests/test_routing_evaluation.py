@@ -5,25 +5,30 @@ from pathlib import Path
 
 import pytest
 
-from evaluation import RoutingCase, evaluate_routing, load_corpus
+from evaluation import RoutingCase, evaluate_routing, load_corpora, load_corpus
 
 
-CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "intent_routing.jsonl"
+CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "cases" / "weather.jsonl"
 
 
 def test_corpus_covers_semantic_boundary_categories() -> None:
     cases = load_corpus(CORPUS)
     categories = {case.category for case in cases}
     assert {
-        "positive", "negative", "hard_negative", "implicit_positive",
-        "mixed_intent", "regression", "ambiguous",
+        "explicit_positive", "negative", "hard_negative", "implicit_positive",
+        "mixed_intent", "regression", "context_required", "ambiguous",
     } <= categories
     labels = {case.text: case.expected_tools for case in cases}
     assert labels["오늘 날씨 어때?"] == frozenset({"weather"})
     assert labels["오늘 날씨가 안 좋아서 그런가 기분이 안 좋네."] == frozenset()
     assert labels["밖에 추워?"] == frozenset({"weather"})
     assert labels["'추워'와 '쌀쌀해'의 차이가 뭐야?"] == frozenset()
+    assert labels["오늘 날씨 좋네."] == frozenset()
+    assert labels["오늘 날씨 좋지?"] == frozenset({"weather"})
     assert any(case.expected_tools is None for case in cases)
+    assert any(case.context for case in cases)
+    assert any("minimal_pair" in case.tags for case in cases)
+    assert any(case.reason for case in cases)
 
 
 def test_evaluator_calculates_multilabel_errors_and_excludes_ambiguous_cases() -> None:
@@ -32,6 +37,10 @@ def test_evaluator_calculates_multilabel_errors_and_excludes_ambiguous_cases() -
         RoutingCase("fp", "weather no", frozenset(), "hard_negative"),
         RoutingCase("fn", "implicit weather", frozenset({"weather"}), "implicit_positive"),
         RoutingCase("tn", "plain chat", frozenset(), "negative"),
+        RoutingCase(
+            "multi", "weather and heat", frozenset({"weather", "hardware_control"}),
+            "mixed_intent",
+        ),
         RoutingCase("ambiguous", "maybe", None, "ambiguous"),
     ]
     predicted = {
@@ -39,15 +48,19 @@ def test_evaluator_calculates_multilabel_errors_and_excludes_ambiguous_cases() -
         "weather no": {"weather"},
         "implicit weather": set(),
         "plain chat": set(),
+        "weather and heat": {"weather", "hardware_control"},
         "maybe": {"weather"},
     }
-    report = evaluate_routing(cases, predicted.__getitem__, latency_iterations=1)
+    report = evaluate_routing(cases, lambda case: predicted[case.text], latency_iterations=1)
     weather = report.tool_metrics["weather"]
-    assert (weather.true_positive, weather.false_positive) == (1, 1)
+    hardware = report.tool_metrics["hardware_control"]
+    assert (weather.true_positive, weather.false_positive) == (2, 1)
     assert (weather.false_negative, weather.true_negative) == (1, 1)
-    assert weather.precision == pytest.approx(0.5)
-    assert weather.recall == pytest.approx(0.5)
-    assert report.scored_cases == 4
+    assert weather.precision == pytest.approx(2 / 3)
+    assert weather.recall == pytest.approx(2 / 3)
+    assert hardware.precision == pytest.approx(1.0)
+    assert hardware.recall == pytest.approx(1.0)
+    assert report.scored_cases == 5
     assert report.ambiguous_cases == 1
     assert [item.case_id for item in report.false_positives] == ["fp"]
     assert [item.case_id for item in report.false_negatives] == ["fn"]
@@ -60,3 +73,13 @@ def test_corpus_loader_rejects_duplicate_ids(tmp_path: Path) -> None:
     path.write_text("\n".join((json.dumps(entry), json.dumps(entry))), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate corpus id"):
         load_corpus(path)
+
+
+def test_multiple_capability_corpora_reject_cross_file_duplicate_ids(tmp_path: Path) -> None:
+    entry = {"id": "shared", "text": "sample", "expected_tools": [], "category": "negative"}
+    first = tmp_path / "weather.jsonl"
+    second = tmp_path / "calendar.jsonl"
+    first.write_text(json.dumps(entry), encoding="utf-8")
+    second.write_text(json.dumps(entry), encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicate corpus id across files"):
+        load_corpora((first, second))

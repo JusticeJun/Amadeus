@@ -12,15 +12,15 @@ BRIDGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BRIDGE_ROOT))
 
 from app.tools.weather import KmaWeatherTool  # noqa: E402
-from evaluation import evaluate_routing, load_corpus  # noqa: E402
+from evaluation import RoutingCase, evaluate_routing, load_corpora  # noqa: E402
 
 
-DEFAULT_CORPUS = BRIDGE_ROOT / "evaluation" / "intent_routing.jsonl"
+DEFAULT_CORPUS_DIR = BRIDGE_ROOT / "evaluation" / "cases"
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Evaluate semantic tool routing offline")
-    parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS)
+    parser.add_argument("--corpus", type=Path, action="append")
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--fail-on-mismatch", action="store_true")
@@ -31,11 +31,13 @@ def main() -> int:
     args = build_parser().parse_args()
     weather = KmaWeatherTool("", "evaluation", None, None)
 
-    def predict(text: str) -> set[str]:
-        return {"weather"} if weather.matches(text) else set()
+    def predict(case: RoutingCase) -> set[str]:
+        return {"weather"} if weather.matches(case.text) else set()
+
+    corpus_paths = args.corpus or sorted(DEFAULT_CORPUS_DIR.glob("*.jsonl"))
 
     report = evaluate_routing(
-        load_corpus(args.corpus),
+        load_corpora(corpus_paths),
         predict,
         latency_iterations=args.iterations,
     )
@@ -53,6 +55,11 @@ def _print_report(report) -> None:
             f"{tool}: precision={metrics.precision:.3f} recall={metrics.recall:.3f} "
             f"f1={metrics.f1:.3f} tp={metrics.true_positive} "
             f"fp={metrics.false_positive} fn={metrics.false_negative}"
+        )
+    for category, metrics in report.category_metrics.items():
+        print(
+            f"category {category}: exact={metrics.exact_matches}/{metrics.scored} "
+            f"mismatches={metrics.mismatches}"
         )
     print(
         f"latency: mean={report.latency.mean_ms:.4f}ms "
