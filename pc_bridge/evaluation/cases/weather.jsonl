@@ -1,0 +1,105 @@
+{"id":"weather_explicit_001","text":"오늘 날씨 어때?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_002","text":"지금 몇 도야?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_003","text":"오늘 비 와?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_004","text":"내일 비 올 확률 얼마나 돼?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_005","text":"현재 습도 몇 퍼센트야?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_006","text":"지금 바람 많이 불어?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_007","text":"오늘 저녁 날씨 알려줘.","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_008","text":"내일은 오늘보다 더울까?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_009","text":"오늘 눈 올 가능성 있어?","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_010","text":"지금 밖에 흐린지 확인해줘.","expected_tools":["weather"],"category":"explicit_positive"}
+{"id":"weather_explicit_011","text":"오늘 밤에는 비 안 오지?","expected_tools":["weather"],"category":"explicit_positive","tags":["negation"]}
+{"id":"weather_explicit_012","text":"눈은 안 오겠지?","expected_tools":["weather"],"category":"explicit_positive","tags":["negation"]}
+{"id":"weather_explicit_013","text":"오늘은 비 안 오는 거 맞지?","expected_tools":["weather"],"category":"explicit_positive","tags":["negation"]}
+{"id":"weather_explicit_014","text":"오늘 날씨 좋지?","expected_tools":["weather"],"category":"explicit_positive","tags":["minimal_pair","statement_request"]}
+{"id":"weather_explicit_015","text":"밖에 엄청 춥지?","expected_tools":["weather"],"category":"explicit_positive","tags":["minimal_pair","statement_request"]}
+{"id":"weather_explicit_016","text":"어제 비 많이 왔던데 오늘도 와?","expected_tools":["weather"],"category":"explicit_positive","tags":["temporal"]}
+{"id":"weather_explicit_017","text":"요즘 계속 덥던데 오늘도 더워?","expected_tools":["weather"],"category":"explicit_positive","tags":["temporal"]}
+{"id":"weather_explicit_018","text":"오늘 진짜 비 오는지 확인해줘.","expected_tools":["weather"],"category":"explicit_positive","tags":["statement_request"]}
+{"id":"weather_implicit_001","text":"밖에 추워?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_002","text":"반팔 입고 나가도 돼?","expected_tools":["weather"],"category":"implicit_positive","intent":"outdoor_clothing_advice"}
+{"id":"weather_implicit_003","text":"겉옷 챙길까?","expected_tools":["weather"],"category":"implicit_positive","intent":"outdoor_clothing_advice"}
+{"id":"weather_implicit_004","text":"오늘 우산 챙겨야 할까?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_005","text":"우산 두고 나가도 돼?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_006","text":"빨래 밖에 널어도 될까?","expected_tools":["weather"],"category":"implicit_positive","reason":"Outdoor drying depends on current or forecast precipitation."}
+{"id":"weather_implicit_007","text":"오늘 세차해도 괜찮을까?","expected_tools":["weather"],"category":"implicit_positive","reason":"The practical answer requires near-term precipitation information."}
+{"id":"weather_implicit_008","text":"저녁에 러닝하기 괜찮을까?","expected_tools":["weather"],"category":"implicit_positive","intent":"outdoor_activity_advice","reason":"Weather is required, while future air-quality or UV capabilities may also be useful."}
+{"id":"weather_implicit_009","text":"창문 열어도 될 만큼 지금 선선해?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_010","text":"해 지고 나면 쌀쌀할까?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_011","text":"밖에 습해?","expected_tools":["weather"],"category":"implicit_positive"}
+{"id":"weather_implicit_012","text":"오늘 뭐 입고 나가야 할까?","expected_tools":["weather"],"category":"implicit_positive","intent":"outdoor_clothing_advice"}
+{"id":"weather_implicit_013","text":"퇴근길에는 옷을 두껍게 입어야 해?","expected_tools":["weather"],"category":"implicit_positive","intent":"outdoor_clothing_advice"}
+{"id":"weather_implicit_014","text":"오늘 그... 비 오냐?","expected_tools":["weather"],"category":"implicit_positive","tags":["spoken_korean"]}
+{"id":"weather_implicit_015","text":"밖에 좀 춥나?","expected_tools":["weather"],"category":"implicit_positive","tags":["spoken_korean"]}
+{"id":"weather_implicit_016","text":"오늘 우산 가져가야 되나","expected_tools":["weather"],"category":"implicit_positive","tags":["spoken_korean"]}
+{"id":"weather_implicit_017","text":"비 안 오겠지?","expected_tools":["weather"],"category":"implicit_positive","tags":["spoken_korean","negation"]}
+{"id":"weather_implicit_018","text":"많이 추우려나","expected_tools":["weather"],"category":"implicit_positive","tags":["spoken_korean"]}
+{"id":"weather_implicit_019","text":"오늘 비 온다던데 약속 취소해야 할까?","expected_tools":["weather"],"category":"implicit_positive","tags":["minimal_pair"],"reason":"The pending decision requires verifying the forecast."}
+{"id":"weather_implicit_020","text":"비 오면 우산 가져가야겠지?","expected_tools":["weather"],"category":"implicit_positive","tags":["minimal_pair"]}
+{"id":"weather_implicit_021","text":"밖에 춥다던데 얼마나 추워?","expected_tools":["weather"],"category":"implicit_positive","tags":["minimal_pair"]}
+{"id":"weather_implicit_022","text":"비가 오든 말든 나갈 건데 우산은 챙겨야 할까?","expected_tools":["weather"],"category":"implicit_positive","tags":["minimal_pair","negation"]}
+{"id":"weather_hard_negative_001","text":"오늘 날씨 좋네.","expected_tools":[],"category":"hard_negative","tags":["minimal_pair","statement_request"],"reason":"A statement is being shared; no verification is requested."}
+{"id":"weather_hard_negative_002","text":"밖에 엄청 춥네.","expected_tools":[],"category":"hard_negative","tags":["minimal_pair","statement_request"],"reason":"The speaker presents the condition as known rather than requesting live data."}
+{"id":"weather_hard_negative_003","text":"오늘 비 온다던데 그래서 약속 취소했어.","expected_tools":[],"category":"hard_negative","tags":["minimal_pair"],"reason":"The decision is already complete and no forecast lookup is requested."}
+{"id":"weather_hard_negative_004","text":"비 와서 우산 샀어.","expected_tools":[],"category":"hard_negative","tags":["minimal_pair"]}
+{"id":"weather_hard_negative_005","text":"비가 오든 말든 오늘은 나갈 거야.","expected_tools":[],"category":"hard_negative","tags":["minimal_pair","negation"]}
+{"id":"weather_hard_negative_006","text":"오늘 날씨가 안 좋아서 그런가 기분이 안 좋네.","expected_tools":[],"category":"hard_negative","intent":"emotional_conversation","reason":"The user is expressing a mood, not asking to verify weather."}
+{"id":"weather_hard_negative_007","text":"비 오는 날 좋아해?","expected_tools":[],"category":"hard_negative"}
+{"id":"weather_hard_negative_008","text":"어제 비 엄청 왔잖아.","expected_tools":[],"category":"hard_negative","tags":["temporal"]}
+{"id":"weather_hard_negative_009","text":"작년 여름 진짜 더웠지.","expected_tools":[],"category":"hard_negative","tags":["temporal"]}
+{"id":"weather_hard_negative_010","text":"지난주에 눈 많이 왔더라.","expected_tools":[],"category":"hard_negative","tags":["temporal"]}
+{"id":"weather_hard_negative_011","text":"비가 안 와도 난 그냥 집에 있을래.","expected_tools":[],"category":"hard_negative","tags":["negation"]}
+{"id":"weather_hard_negative_012","text":"날씨가 좋아도 오늘은 안 나갈 거야.","expected_tools":[],"category":"hard_negative","tags":["negation"]}
+{"id":"weather_hard_negative_013","text":"내 우산 예쁘지?","expected_tools":[],"category":"hard_negative"}
+{"id":"weather_hard_negative_014","text":"눈 오는 장면이 예쁜 영화 추천해줘.","expected_tools":[],"category":"hard_negative"}
+{"id":"weather_hard_negative_015","text":"비 냄새가 좋은 이유가 뭐야?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_016","text":"태풍은 왜 생겨?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_017","text":"장마는 왜 생겨?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_018","text":"기온과 체감온도는 뭐가 달라?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_019","text":"강수확률 50%라는 게 무슨 뜻이야?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_020","text":"강수라는 단어의 뜻을 알려줘.","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_021","text":"'추워'와 '쌀쌀해'의 차이가 뭐야?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"]}
+{"id":"weather_hard_negative_022","text":"오늘 내 마음은 흐림이야.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_023","text":"분위기가 갑자기 싸늘해졌어.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_024","text":"너 오늘 왜 이렇게 차가워?","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_025","text":"회사 분위기가 완전히 얼어붙었어.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_026","text":"요즘 내 인생에 먹구름이 낀 것 같아.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_027","text":"우리 사이가 요즘 쌀쌀해진 것 같아.","expected_tools":[],"category":"hard_negative","tags":["metaphor"]}
+{"id":"weather_hard_negative_028","text":"우산이라는 제목의 소설 알아?","expected_tools":[],"category":"hard_negative"}
+{"id":"weather_unsupported_001","text":"오늘 선크림 발라야 할까?","expected_tools":["uv"],"category":"unsupported_capability","reason":"A useful answer requires live UV data, which the current Weather capability does not provide."}
+{"id":"weather_hard_negative_030","text":"미세먼지는 왜 생겨?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require live air-quality data."}
+{"id":"weather_hard_negative_031","text":"자외선이 피부에 왜 안 좋아?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require a live UV lookup."}
+{"id":"weather_negative_001","text":"오늘 기분 어때?","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_002","text":"크롬 켜줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_003","text":"내일 일정 알려줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_004","text":"일정 관리 잘하는 법 알려줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_005","text":"크롬이랑 엣지 중 뭐가 좋아?","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_006","text":"볼륨을 30%로 해줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_mixed_001","text":"날씨가 안 좋아서 기분도 별론데 오늘 비 계속 와?","expected_tools":["weather"],"category":"mixed_intent","intent":"emotional_conversation"}
+{"id":"weather_mixed_002","text":"오늘 비 와? 난 비 오는 날 좋아하는데.","expected_tools":["weather"],"category":"mixed_intent","intent":"conversation"}
+{"id":"weather_mixed_003","text":"요즘 좀 우울한데 내일도 이렇게 흐릴까?","expected_tools":["weather"],"category":"mixed_intent","intent":"emotional_conversation"}
+{"id":"weather_mixed_004","text":"산책하고 싶은데 오늘 비 맞을 일은 없겠지?","expected_tools":["weather"],"category":"mixed_intent","intent":"outdoor_activity_advice"}
+{"id":"weather_mixed_005","text":"어제는 너무 추워서 힘들었어. 오늘은 좀 따뜻해?","expected_tools":["weather"],"category":"mixed_intent","tags":["temporal"]}
+{"id":"weather_mixed_006","text":"비 오는 건 좋은데 출근할 때도 계속 올까?","expected_tools":["weather"],"category":"mixed_intent"}
+{"id":"weather_mixed_007","text":"오늘 좀 답답해서 나가고 싶은데 밖에 많이 더워?","expected_tools":["weather"],"category":"mixed_intent","intent":"emotional_conversation"}
+{"id":"weather_mixed_008","text":"눈 구경은 하고 싶은데 내일 진짜 눈 와?","expected_tools":["weather"],"category":"mixed_intent"}
+{"id":"weather_regression_001","text":"안녕 크리스 오늘 날씨가 좋네","expected_tools":[],"category":"regression","tags":["statement_request"],"reason":"Relabeled after review: the user is making conversation, not requesting a live lookup."}
+{"id":"weather_regression_002","text":"안녕 크리스 지금 밖에 날씨 좀 알려줄래","expected_tools":["weather"],"category":"regression","reason":"A real-user phrasing previously missed by exact phrase matching."}
+{"id":"weather_regression_003","text":"안녕 크리스 혹시 지금 밖에 좀 더운지 알려줄래","expected_tools":["weather"],"category":"regression","reason":"A real-user implicit temperature request using a Korean inflection."}
+{"id":"weather_regression_004","text":"비 오는 노래 좋아해?","expected_tools":[],"category":"regression","reason":"A real-user hard negative for precipitation vocabulary."}
+{"id":"weather_regression_005","text":"오늘 날씨가 좋네","expected_tools":[],"category":"regression","tags":["minimal_pair","statement_request"],"reason":"Preserves the reviewed distinction between a statement and a verification request."}
+{"id":"weather_context_001","context":[{"role":"user","content":"내일 등산 갈 거야."}],"text":"괜찮을까?","expected_tools":["weather"],"category":"context_required","intent":"outdoor_activity_advice","reason":"The current utterance requires prior context to identify weather as relevant."}
+{"id":"weather_context_002","context":[{"role":"user","content":"오늘 비 온대."}],"text":"내일은?","expected_tools":["weather"],"category":"context_required","reason":"The omitted predicate is recoverable only from the previous weather turn."}
+{"id":"weather_context_003","context":[{"role":"user","content":"주말에 빨래를 몰아서 하려고 해."}],"text":"밖에 널어도 되려나?","expected_tools":["weather"],"category":"context_required","reason":"Prior context establishes the activity and time frame."}
+{"id":"weather_context_004","context":[{"role":"user","content":"새 우산 샀어."}],"text":"예쁘지?","expected_tools":[],"category":"context_required","reason":"Context resolves the utterance as an opinion request, not weather lookup."}
+{"id":"weather_context_005","context":[{"role":"user","content":"어제 비 때문에 약속 취소했어."}],"text":"진짜 아쉬웠지.","expected_tools":[],"category":"context_required"}
+{"id":"weather_context_006","context":[{"role":"user","content":"오늘 저녁에 러닝하려고 해."}],"text":"많이 추우려나?","expected_tools":["weather"],"category":"context_required"}
+{"id":"weather_ambiguous_001","text":"오늘 나갈까?","expected_tools":null,"category":"ambiguous","reason":"Could be a general preference or a request for weather-informed advice."}
+{"id":"weather_ambiguous_002","text":"우산 가져갈까?","expected_tools":null,"category":"ambiguous","reason":"Likely weather-related but may refer to an existing plan or prior context."}
+{"id":"weather_ambiguous_003","text":"요즘 왜 이렇게 축축하지?","expected_tools":null,"category":"ambiguous","reason":"Could refer to weather, a room, an object, or a metaphor."}
+{"id":"weather_ambiguous_004","text":"내일 괜찮을까?","expected_tools":null,"category":"ambiguous","reason":"The target of the question is missing."}
+{"id":"weather_ambiguous_005","text":"아 날씨 진짜...","expected_tools":null,"category":"ambiguous","reason":"An incomplete reaction does not establish whether lookup is requested."}
+{"id":"weather_ambiguous_006","text":"밖에 괜찮아?","expected_tools":null,"category":"ambiguous","reason":"Could concern weather, safety, noise, or another external condition."}
+{"id":"weather_ambiguous_007","text":"밖에 춥다던데.","expected_tools":null,"category":"ambiguous","tags":["minimal_pair","statement_request"],"reason":"The user may be sharing hearsay or implicitly seeking confirmation."}
+{"id":"weather_unsupported_002","text":"어제 날씨 어땠어?","expected_tools":["weather_history"],"category":"unsupported_capability","tags":["temporal"],"reason":"Historical weather data is required, but the current Weather capability only supports current and forecast data."}
+{"id":"weather_unsupported_003","text":"태풍 지금 어디쯤이야?","expected_tools":["typhoon_tracking"],"category":"unsupported_capability","reason":"Live typhoon tracking data is required and is outside the current short-term forecast capability."}
