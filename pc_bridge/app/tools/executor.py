@@ -23,6 +23,8 @@ class ToolExecutor:
             self._tools[tool.name] = tool
 
     def execute(self, decision: RouteDecision, user_text: str) -> tuple[ToolExecution, ...]:
+        if decision.planning_required:
+            return ()
         executions: list[ToolExecution] = []
         for match in decision.matches:
             tool = self._tools.get(match.capability)

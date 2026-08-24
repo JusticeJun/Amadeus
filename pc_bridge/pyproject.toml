@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "PC-side conversation, TTS, and serial bridge for Amadeus"
 requires-python = ">=3.10,<3.15"
 dependencies = [
+    "pycaw==20251023; sys_platform == 'win32'",
     "pyserial>=3.5,<4",
 ]
 

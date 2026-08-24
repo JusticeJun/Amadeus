@@ -12,6 +12,13 @@ from .tts import TtsEngine, TtsError
 from .tools import ToolExecutor
 
 
+_PLANNING_REQUIRED_CONTEXT = (
+    "이 요청은 외부 기능의 결과에 따라 다른 기능을 조건부로 실행해야 하지만 아직 안전하게 "
+    "계획할 수 없어 어떤 기능도 실행하지 않았다. 내부 구조나 도구를 언급하지 말고, 조건부 요청은 "
+    "지금 바로 수행할 수 없다고 크리스의 말투로 짧게 답한다."
+)
+
+
 class ConversationManager:
     def __init__(self, input_provider: InputProvider, llm: LlmClient,
                  tts: TtsEngine, serial_bridge: SerialBridge,
@@ -39,6 +46,9 @@ class ConversationManager:
             turn_started = time.perf_counter()
             history = self._memory.messages()
             route = self._router.route(RoutingRequest(user_text, tuple(history)))
+            if route.planning_required:
+                print(f"[route] planning required: {route.planning_reason}")
+                history = history + [ChatMessage("system", _PLANNING_REQUIRED_CONTEXT)]
             executions = self._executor.execute(route, user_text)
             for execution in executions:
                 tool_result = execution.result

@@ -27,11 +27,15 @@ class CapabilityMatch:
 @dataclass(frozen=True)
 class RouteDecision:
     matches: tuple[CapabilityMatch, ...] = ()
+    planning_required: bool = False
+    planning_reason: str = ""
 
     def __post_init__(self) -> None:
         capabilities = [match.capability for match in self.matches]
         if len(capabilities) != len(set(capabilities)):
             raise ValueError("route decision contains duplicate capabilities")
+        if self.planning_required and not self.planning_reason.strip():
+            raise ValueError("planning reason is required")
 
     @property
     def required_capabilities(self) -> frozenset[str]:

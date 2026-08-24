@@ -157,3 +157,28 @@ def test_multiple_tool_contexts_are_passed_to_one_character_llm_call() -> None:
     context = [item.content for item in llm.history if item.role == "system"]
     assert any('"temperature_c":27' in item for item in context)
     assert any('"action":"playing"' in item for item in context)
+
+
+def test_planning_required_request_executes_no_tools_and_informs_character_llm() -> None:
+    llm = CapturingLlm()
+    weather = StubWeatherTool()
+    media = StubMediaTool()
+    router = RuleBasedSemanticRouter(
+        {"weather": lambda request: True, "media_control": lambda request: True},
+        planning_detectors=(lambda request, capabilities: "conditional_dependency",),
+    )
+    manager = ConversationManager(
+        SequenceInput(["비 오면 음악 틀어줘.", "/quit"]),
+        llm,
+        CapturingTts(),
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=router,
+        tool_executor=ToolExecutor([weather, media]),
+    )
+
+    manager.run()
+
+    assert not any(item.content.startswith("검증된 외부 정보") for item in llm.history)
+    assert not any(item.content.startswith("검증된 실행 결과") for item in llm.history)
+    assert any("어떤 기능도 실행하지 않았다" in item.content for item in llm.history)

@@ -6,10 +6,12 @@ from .config import Settings
 from .conversation import ConversationManager
 from .input_provider import TextInputProvider
 from .llm import GroqLlmClient, LlmError, MockLlmClient
-from .routing import RuleBasedSemanticRouter, matches_weather_request
+from .pc_control import RuleBasedPcActionParser, default_app_registry
+from .pc_control.windows import WindowsPcController
+from .routing import create_default_semantic_router
 from .serial_bridge import SerialBridge
 from .tts import TtsError, create_tts_engine
-from .tools import KmaWeatherTool, ToolExecutor
+from .tools import KmaWeatherTool, PcControlTool, ToolExecutor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,14 +40,18 @@ def main() -> int:
     except (LlmError, TtsError) as exc:
         print(f"[config] {exc}")
         return 2
+    apps = default_app_registry()
     tools = [KmaWeatherTool(
         settings.kma_service_key,
         settings.amadeus_location_name,
         settings.amadeus_latitude,
         settings.amadeus_longitude,
         settings.weather_timeout_seconds,
+    ), PcControlTool(
+        RuleBasedPcActionParser(apps),
+        WindowsPcController(apps),
     )]
-    semantic_router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+    semantic_router = create_default_semantic_router(apps)
     with SerialBridge(settings.serial_enabled, settings.serial_port, settings.serial_baud) as bridge:
         ConversationManager(
             TextInputProvider(), llm, tts, bridge,
