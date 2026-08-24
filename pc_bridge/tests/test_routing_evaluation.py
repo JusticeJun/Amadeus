@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from app.models import ChatMessage
+from app.routing import RoutingRequest, RuleBasedSemanticRouter, matches_weather_request
 from evaluation import (
     RoutingCase,
     RoutingContext,
@@ -121,3 +123,16 @@ def test_multiple_capability_corpora_reject_cross_file_duplicate_ids(tmp_path: P
     second.write_text(json.dumps(entry), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate corpus id across files"):
         load_corpora((first, second))
+
+
+def test_rule_router_preserves_weather_evaluation_baseline() -> None:
+    router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+
+    def predict(case: RoutingCase) -> set[str]:
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        decision = router.route(RoutingRequest(case.text, history))
+        return set(decision.required_capabilities)
+
+    report = evaluate_routing(load_corpus(CORPUS), predict, latency_iterations=1)
+    weather = report.tool_metrics["weather"]
+    assert (weather.true_positive, weather.false_positive, weather.false_negative) == (28, 8, 26)
