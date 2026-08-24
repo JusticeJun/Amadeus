@@ -3,9 +3,10 @@ from pathlib import Path
 from app.conversation import ConversationManager
 from app.llm import LlmClient
 from app.models import LlmResult
+from app.routing import RuleBasedSemanticRouter
 from app.tts import TtsEngine
+from app.tools import ToolExecutor
 from app.tools.base import ToolResult
-from app.tools.router import ToolRouter
 
 
 class SequenceInput:
@@ -49,11 +50,21 @@ class CapturingLlm(LlmClient):
 class StubWeatherTool:
     name = "weather"
 
-    def matches(self, user_text: str) -> bool:
-        return "날씨" in user_text
-
     def run(self, user_text: str) -> ToolResult:
         return ToolResult("weather", True, {"location": "Busan", "temperature_c": 27})
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        return f'검증된 외부 정보: {{"temperature_c":{result.data["temperature_c"]}}}'
+
+
+class StubMediaTool:
+    name = "media_control"
+
+    def run(self, user_text: str) -> ToolResult:
+        return ToolResult("media_control", True, {"action": "playing"})
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        return '검증된 실행 결과: {"action":"playing"}'
 
 
 class CapturingTts(TtsEngine):
@@ -114,7 +125,9 @@ def test_tool_facts_are_passed_to_llm_without_becoming_the_reply() -> None:
     tts = CapturingTts()
     manager = ConversationManager(
         SequenceInput(["오늘 날씨 어때?", "/quit"]), llm, tts, CapturingSerial(),
-        neutral_hold_seconds=0, tool_router=ToolRouter([StubWeatherTool()]),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({"weather": lambda request: True}),
+        tool_executor=ToolExecutor([StubWeatherTool()]),
     )
 
     manager.run()
@@ -122,3 +135,25 @@ def test_tool_facts_are_passed_to_llm_without_becoming_the_reply() -> None:
     context = [item.content for item in llm.history if item.role == "system"]
     assert any('"temperature_c":27' in item for item in context)
     assert tts.results[0].reply == "오늘은 비가 올 수 있겠네."
+
+
+def test_multiple_tool_contexts_are_passed_to_one_character_llm_call() -> None:
+    llm = CapturingLlm()
+    manager = ConversationManager(
+        SequenceInput(["비 오는지 확인하고 음악 틀어줘.", "/quit"]),
+        llm,
+        CapturingTts(),
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({
+            "weather": lambda request: True,
+            "media_control": lambda request: True,
+        }),
+        tool_executor=ToolExecutor([StubWeatherTool(), StubMediaTool()]),
+    )
+
+    manager.run()
+
+    context = [item.content for item in llm.history if item.role == "system"]
+    assert any('"temperature_c":27' in item for item in context)
+    assert any('"action":"playing"' in item for item in context)

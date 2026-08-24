@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from urllib.error import URLError
 
+from app.routing import RoutingRequest, matches_weather_request
 from app.tools.weather import (
     KmaWeatherTool,
     latlon_to_grid,
@@ -39,7 +40,6 @@ class FakeResponse:
 
 
 def test_routes_weather_questions_without_matching_mood_chat() -> None:
-    tool = KmaWeatherTool("key", "Busan", 35.1796, 129.0756)
     for text in (
         "지금 날씨 어때?", "지금 몇 도야?", "오늘 비 와?", "오늘 저녁에 비 와?",
         "내일 날씨 어때?", "내일 추워?", "안녕 크리스 오늘 날씨가 좋네",
@@ -61,7 +61,7 @@ def test_routes_weather_questions_without_matching_mood_chat() -> None:
         "현재 날씨가 흐리네",
         "일기예보 좀 봐줘",
     ):
-        assert tool.matches(text), text
+        assert matches_weather_request(RoutingRequest(text)), text
     for text in (
         "오늘 기분 어때?", "너 뭐 좋아해?", "비 오는 노래 좋아해?",
         "눈 오는 장면이 예쁜 영화 추천해줘",
@@ -76,7 +76,7 @@ def test_routes_weather_questions_without_matching_mood_chat() -> None:
         "우산이라는 소설 알아?",
         "오늘 기분이 맑아",
     ):
-        assert not tool.matches(text), text
+        assert not matches_weather_request(RoutingRequest(text)), text
 
 
 def test_query_periods_are_understood() -> None:
@@ -245,16 +245,19 @@ def test_missing_configuration_and_network_errors_are_isolated() -> None:
 
 
 def test_failed_tool_context_does_not_expose_internal_error() -> None:
+    tool = KmaWeatherTool("key", "Busan", 35.1796, 129.0756)
     result = ToolResult("weather", False, {}, "HTTP 500: private diagnostic")
-    context = result.llm_context()
+    context = tool.build_llm_context(result)
     assert "HTTP" not in context
     assert "private diagnostic" not in context
 
 
 def test_success_context_forbids_unprovided_weather_inference() -> None:
-    context = ToolResult(
+    tool = KmaWeatherTool("key", "Busan", 35.1796, 129.0756)
+    result = ToolResult(
         "weather", True, {"location": "Busan", "temperature_c": 27}
-    ).llm_context()
+    )
+    context = tool.build_llm_context(result)
     assert "절대 만들어내지 않는다" in context
     assert '"temperature_c":27' in context
 

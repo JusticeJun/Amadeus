@@ -6,9 +6,10 @@ from .config import Settings
 from .conversation import ConversationManager
 from .input_provider import TextInputProvider
 from .llm import GroqLlmClient, LlmError, MockLlmClient
+from .routing import RuleBasedSemanticRouter, matches_weather_request
 from .serial_bridge import SerialBridge
 from .tts import TtsError, create_tts_engine
-from .tools import KmaWeatherTool, ToolRouter
+from .tools import KmaWeatherTool, ToolExecutor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -44,9 +45,12 @@ def main() -> int:
         settings.amadeus_longitude,
         settings.weather_timeout_seconds,
     )]
+    semantic_router = RuleBasedSemanticRouter({"weather": matches_weather_request})
     with SerialBridge(settings.serial_enabled, settings.serial_port, settings.serial_baud) as bridge:
         ConversationManager(
-            TextInputProvider(), llm, tts, bridge, tool_router=ToolRouter(tools)
+            TextInputProvider(), llm, tts, bridge,
+            semantic_router=semantic_router,
+            tool_executor=ToolExecutor(tools),
         ).run()
     return 0
 

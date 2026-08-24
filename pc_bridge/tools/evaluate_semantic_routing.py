@@ -11,7 +11,12 @@ import sys
 BRIDGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BRIDGE_ROOT))
 
-from app.tools.weather import KmaWeatherTool  # noqa: E402
+from app.models import ChatMessage  # noqa: E402
+from app.routing import (  # noqa: E402
+    RoutingRequest,
+    RuleBasedSemanticRouter,
+    matches_weather_request,
+)
 from evaluation import RoutingCase, evaluate_routing, load_corpora  # noqa: E402
 
 
@@ -29,10 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    weather = KmaWeatherTool("", "evaluation", None, None)
+    router = RuleBasedSemanticRouter({"weather": matches_weather_request})
 
     def predict(case: RoutingCase) -> set[str]:
-        return {"weather"} if weather.matches(case.text) else set()
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        return set(router.route(RoutingRequest(case.text, history)).required_capabilities)
 
     corpus_paths = args.corpus or sorted(DEFAULT_CORPUS_DIR.glob("*.jsonl"))
 
