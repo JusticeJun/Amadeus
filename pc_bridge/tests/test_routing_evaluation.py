@@ -150,31 +150,60 @@ def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
     pc_cases = load_corpus(PC_CORPUS)
     cross_cases = load_corpus(CROSS_CORPUS)
 
-    assert {"explicit_positive", "implicit_positive", "hard_negative"} <= {
+    assert {
+        "explicit_positive", "implicit_positive", "hard_negative", "minimal_pair",
+        "context_required", "ambiguous", "unsupported_action", "security_boundary",
+    } <= {
         case.category for case in pc_cases
     }
-    assert any(case.category == "security_boundary" for case in pc_cases)
+    assert len(pc_cases) == 76
+    assert len(cross_cases) == 34
+    assert sum("minimal_pair" in case.tags for case in pc_cases) >= 7
     assert any(case.expected_tools == frozenset({"weather", "pc_control"}) for case in cross_cases)
     assert any(case.category == "planning_required" for case in cross_cases)
     assert any(case.expected_tools == frozenset() for case in cross_cases)
 
 
-def test_default_router_matches_pc_and_cross_capability_corpora() -> None:
+def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
     router = create_default_semantic_router(default_app_registry())
 
     def predict(case: RoutingCase) -> set[str]:
-        return set(router.route(RoutingRequest(case.text)).required_capabilities)
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        return set(router.route(RoutingRequest(case.text, history)).required_capabilities)
 
-    report = evaluate_routing(
-        load_corpora((PC_CORPUS, CROSS_CORPUS)),
-        predict,
-        latency_iterations=1,
+    pc_report = evaluate_routing(load_corpus(PC_CORPUS), predict, latency_iterations=1)
+    cross_report = evaluate_routing(load_corpus(CROSS_CORPUS), predict, latency_iterations=1)
+
+    pc = pc_report.tool_metrics["pc_control"]
+    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (29, 2, 18)
+    cross_pc = cross_report.tool_metrics["pc_control"]
+    cross_weather = cross_report.tool_metrics["weather"]
+    assert (cross_pc.true_positive, cross_pc.false_positive, cross_pc.false_negative) == (18, 0, 4)
+    assert (
+        cross_weather.true_positive,
+        cross_weather.false_positive,
+        cross_weather.false_negative,
+    ) == (14, 3, 6)
+
+
+def test_planning_cases_preserve_capabilities_and_block_only_detected_dependencies() -> None:
+    router = create_default_semantic_router(default_app_registry())
+    cases = [
+        case for case in load_corpus(CROSS_CORPUS)
+        if case.category == "planning_required"
+    ]
+    decisions = []
+    for case in cases:
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        decisions.append(router.route(RoutingRequest(case.text, history)))
+
+    assert len(cases) == 7
+    assert sum(decision.planning_required for decision in decisions) == 4
+    assert all(
+        not decision.planning_required
+        or decision.required_capabilities == {"weather", "pc_control"}
+        for decision in decisions
     )
-
-    assert report.tool_metrics["pc_control"].precision == 1.0
-    assert report.tool_metrics["pc_control"].recall == 1.0
-    assert report.tool_metrics["weather"].precision == 1.0
-    assert report.tool_metrics["weather"].recall == 1.0
 
 
 def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:

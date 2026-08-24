@@ -8,3 +8,27 @@
 {"id":"cross_negative_003","text":"볼륨 큰 음악은 비 오는 날 잘 어울려.","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
 {"id":"cross_planning_001","text":"오늘 비 오면 크롬 켜줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}
 {"id":"cross_planning_002","text":"날씨가 나쁘면 음악을 일시정지해줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}
+{"id":"cross_weather_pc_004","text":"볼륨 좀 줄이고 오늘 비 오는지도 알려줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools","order_reversed"]}
+{"id":"cross_weather_pc_005","text":"계산기 켜주고 밖에 지금 추운지도 봐줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools","order_reversed"]}
+{"id":"cross_weather_pc_006","text":"내일 날씨 확인해주고 메모장도 띄워줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools","colloquial"]}
+{"id":"cross_weather_pc_007","text":"음소거하고 오늘 저녁에 비 오는지 알려줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools","order_reversed"]}
+{"id":"cross_weather_pc_008","text":"오늘 기온 좀 알려주고 다음 곡으로 넘겨줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"cross_weather_pc_009","text":"밖에 더운지 보고 소리도 조금 낮춰줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools","implicit_weather"]}
+{"id":"cross_pc_only_003","text":"날씨는 됐고 계산기 켜줘","expected_tools":["pc_control"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_pc_only_004","text":"비가 오는지는 관심 없고 메모장이나 열어줘","expected_tools":["pc_control"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_weather_only_001","text":"크롬은 됐고 오늘 비 오는지만 알려줘","expected_tools":["weather"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_weather_only_002","text":"볼륨 얘기는 그만하고 지금 몇 도야?","expected_tools":["weather"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_negative_004","text":"비 오는 날 크롬으로 영화 보는 거 좋아해","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_005","text":"날씨가 추우면 음악 볼륨이 다르게 들리나?","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_006","text":"계산기로 강수확률 계산하는 법 알려줘","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_007","text":"크롬에서 일기예보 보는 사이트 추천해줘","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_008","text":"비 오는 날엔 다음 곡도 잔잔했으면 좋겠어","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_minimal_001","text":"오늘 비 오는지 알려주고 크롬 켜줘","expected_tools":["weather","pc_control"],"category":"minimal_pair","tags":["independent_tools","minimal_pair"]}
+{"id":"cross_minimal_002","text":"비 오는 날 크롬 켜는 법 알려줘","expected_tools":[],"category":"minimal_pair","tags":["cross_capability","minimal_pair"]}
+{"id":"cross_planning_003","text":"밖에 추우면 볼륨 좀 올려줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency","implicit_weather"]}
+{"id":"cross_planning_004","text":"오늘 비가 안 오면 메모장 켜줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency","negated_condition"]}
+{"id":"cross_planning_005","text":"기온이 30도 넘으면 음악을 일시정지해줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency","numeric_condition"]}
+{"id":"cross_planning_006","text":"내일 날씨가 맑으면 크롬 열어줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency","forecast"]}
+{"id":"cross_planning_007","text":"비가 많이 오면 음소거해줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}
+{"id":"cross_ambiguous_001","text":"날씨 보고 알아서 조절해줘","expected_tools":null,"category":"ambiguous","tags":["missing_action","cross_capability"]}
+{"id":"cross_context_001","text":"그러면 소리 좀 줄여줘","expected_tools":["weather","pc_control"],"category":"context_required","tags":["cross_capability"],"context":[{"role":"user","content":"오늘 비가 오면 음악 듣기 답답할 것 같아."}]}
