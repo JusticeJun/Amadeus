@@ -39,13 +39,21 @@ class RuleBasedPcActionParser:
             actions.append(PcAction(PcActionType.LAUNCH_APP, target=app_id))
 
         volume_subject = "볼륨" in compact or "소리" in compact
+        maximum = volume_subject and bool(re.search(
+            r"(?:볼륨|소리)(?:을|를)?(?:최대|최대치)(?:로|으로)?"
+            r"(?:해줘|해봐|맞춰(?:줘|봐)?|설정(?:해줘|해봐)?|"
+            r"올려(?:줘|봐)|높여(?:줘|봐)|키워(?:줘|봐)?)",
+            compact,
+        ))
         absolute = re.search(
             r"(?:볼륨|소리)(?:을|를)?(\d{1,3})(?:%|퍼센트)?(?:로|으로)?"
             r"(?:해줘|해봐|맞춰(?:줘|봐)?|설정(?:해줘|해봐)?|"
             r"줄여(?:줘|봐)|낮춰(?:줘|봐)|올려(?:줘|봐))",
             compact,
         )
-        if absolute:
+        if maximum:
+            actions.append(PcAction(PcActionType.SET_VOLUME, amount=100))
+        elif absolute:
             amount = int(absolute.group(1))
             if not 0 <= amount <= 100:
                 return PcActionParseResult(error_code="invalid_volume")
