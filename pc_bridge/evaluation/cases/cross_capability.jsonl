@@ -31,4 +31,4 @@
 {"id":"cross_planning_006","text":"내일 날씨가 맑으면 크롬 열어줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency","forecast"]}
 {"id":"cross_planning_007","text":"비가 많이 오면 음소거해줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}
 {"id":"cross_ambiguous_001","text":"날씨 보고 알아서 조절해줘","expected_tools":null,"category":"ambiguous","tags":["missing_action","cross_capability"]}
-{"id":"cross_context_001","text":"그러면 소리 좀 줄여줘","expected_tools":["weather","pc_control"],"category":"context_required","tags":["cross_capability"],"context":[{"role":"user","content":"오늘 비가 오면 음악 듣기 답답할 것 같아."}]}
+{"id":"cross_context_001","text":"그러면 소리 좀 줄여줘","expected_tools":["pc_control"],"category":"context_present","tags":["stale_weather_context"],"context":[{"role":"user","content":"오늘 비가 오면 음악 듣기 답답할 것 같아."}]}

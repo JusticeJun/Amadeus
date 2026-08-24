@@ -70,6 +70,14 @@ def test_parser_extracts_only_supported_structured_actions(app_registry: AppRegi
     assert parser.parse("음악 일시정지해줘").actions == (
         PcAction(PcActionType.MEDIA_PLAY_PAUSE),
     )
+    assert parser.parse("크롬 좀 띄워줘").actions == (
+        PcAction(PcActionType.LAUNCH_APP, target="chrome"),
+    )
+    assert parser.parse("소리 아예 꺼줘").actions == (PcAction(PcActionType.MUTE),)
+    assert parser.parse("한 곡 넘겨줘").actions == (PcAction(PcActionType.MEDIA_NEXT),)
+    assert parser.parse("아까 노래로 돌아가줘").actions == (
+        PcAction(PcActionType.MEDIA_PREVIOUS),
+    )
 
 
 def test_parser_rejects_unknown_apps_injection_and_invalid_volume(
@@ -80,6 +88,9 @@ def test_parser_rejects_unknown_apps_injection_and_invalid_volume(
     assert parser.parse("포토샵 켜줘").error_code == "unsupported_app"
     assert parser.parse("크롬 켜줘 & calc.exe").error_code == "unsafe_input"
     assert parser.parse("cmd /c calc.exe").error_code == "unsafe_input"
+    assert parser.parse("메모장 켜고 C:\\password.txt 열어줘").error_code == "unsafe_input"
+    assert parser.parse("크롬 켜면서 --incognito 붙여줘").error_code == "unsafe_input"
+    assert parser.parse("크롬 켜고 example.com도 열어줘").error_code == "unsafe_input"
     assert parser.parse("볼륨 101로 해줘").error_code == "invalid_volume"
 
 

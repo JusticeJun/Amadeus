@@ -7,10 +7,17 @@ from .base import RoutingRequest
 
 
 _LAUNCH_INTENT = (
-    "켜줘", "켜봐", "열어줘", "열어봐", "실행해줘", "실행해봐", "실행시켜",
+    "켜줘", "켜봐", "켜줄래", "켜주고", "열어줘", "열어봐", "열어줄래",
+    "열어주고", "띄워줘", "띄워주고",
+    "실행해줘", "실행해봐", "실행시켜",
 )
-_KNOWN_UNSUPPORTED_APPS = ("포토샵",)
-_CONDITIONAL_WEATHER = re.compile(r"(?:비|눈|날씨).{0,12}(?:오|내리|나쁘|좋).{0,5}면")
+_KNOWN_UNSUPPORTED_APPS = ("포토샵", "엣지", "그림판")
+_WEATHER_DEPENDENCY = re.compile(
+    r"(?:비|눈|날씨|기온|온도|밖|바깥).{0,30}"
+    r"(?:면|하면|으면|일때|인경우|넘으면)",
+)
+_VOLUME_UP_COMMANDS = ("올려", "올리고", "높여", "높이고", "키워", "크게해")
+_VOLUME_DOWN_COMMANDS = ("내려", "내리고", "낮춰", "낮추고", "줄여", "줄이고", "작게해")
 
 
 def matches_pc_control_request(request: RoutingRequest, apps: AppRegistry) -> bool:
@@ -20,26 +27,43 @@ def matches_pc_control_request(request: RoutingRequest, apps: AppRegistry) -> bo
         apps.resolve_alias(text) is not None
         or any(app in text for app in _KNOWN_UNSUPPORTED_APPS)
     )
-    volume_action = ("볼륨" in text or "소리" in text) and any(word in text for word in (
-        "올려", "높여", "키워", "크게", "내려", "낮춰", "줄여", "작게", "설정", "맞춰",
-        "해줘",
+    volume_subject = "볼륨" in text or "소리" in text
+    volume_absolute = volume_subject and bool(re.search(
+        r"(?:볼륨|소리)(?:을|를)?\d{1,3}(?:%|퍼센트)?(?:로|으로)?"
+        r"(?:해줘|맞춰|설정|해봐)",
+        text,
     ))
-    mute_action = "음소거" in text and any(word in text for word in (
-        "해줘", "켜줘", "풀어", "해제", "시켜",
-    ))
+    volume_relative = volume_subject and any(
+        word in text for word in _VOLUME_UP_COMMANDS + _VOLUME_DOWN_COMMANDS
+    )
+    volume_action = volume_absolute or volume_relative
+    mute_action = (
+        "음소거" in text and any(word in text for word in (
+            "해줘", "켜줘", "풀어", "해제", "시켜", "걸어", "하고",
+        ))
+    ) or bool(re.search(r"소리(?:를)?(?:아예)?(?:꺼|끄)|다시소리나게", text))
     media_target = any(word in text for word in (
         "다음곡", "다음노래", "다음트랙", "이전곡", "이전노래", "이전트랙",
     ))
-    media_command = any(word in text for word in ("넘겨", "재생해", "틀어", "바꿔"))
+    media_command = any(word in text for word in (
+        "넘겨", "재생해", "틀어", "바꿔", "돌아가",
+    ))
     media_action = (media_target and (
         media_command or text in {
             "다음곡", "다음노래", "다음트랙", "이전곡", "이전노래", "이전트랙",
         }
     )) or bool(re.search(
-        r"(?:(?:음악|노래)(?:을|를)?(?:일시정지|재생)|다시재생|재생멈춰)",
+        r"(?:한곡넘겨|아까노래(?:로)?돌아가|재생(?:잠깐)?멈춰|"
+        r"(?:음악|노래)(?:을|를)?(?:일시정지|재생|다시틀어)|다시재생|재생멈춰)",
         text,
     ))
-    return app_launch or volume_action or mute_action or media_action
+    unsafe_or_unsupported = bool(re.search(
+        r"(?:(?:powershell|cmd|pwsh|del|dir)|--\w+|https?://|"
+        r"(?:컴퓨터|pc)(?:를)?(?:재부팅|종료)|(?:창)?닫아줘)",
+        text,
+    ))
+    return app_launch or volume_action or mute_action or media_action \
+        or unsafe_or_unsupported
 
 
 def excludes_weather_lookup_for_pc_discussion(request: RoutingRequest) -> bool:
@@ -53,7 +77,7 @@ def matches_conditional_weather_pc_request(
     apps: AppRegistry,
 ) -> bool:
     compact = "".join(request.text.lower().split())
-    return bool(_CONDITIONAL_WEATHER.search(compact)) \
+    return bool(_WEATHER_DEPENDENCY.search(compact)) \
         and matches_pc_control_request(request, apps)
 
 
@@ -61,8 +85,8 @@ def detect_conditional_pc_planning(
     request: RoutingRequest,
     capabilities: frozenset[str],
 ) -> str | None:
-    if {"weather", "pc_control"} <= capabilities:
+    if "pc_control" in capabilities:
         compact = "".join(request.text.lower().split())
-        if _CONDITIONAL_WEATHER.search(compact):
+        if _WEATHER_DEPENDENCY.search(compact):
             return "conditional_tool_dependency"
     return None
