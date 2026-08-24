@@ -23,6 +23,8 @@ class ToolExecutor:
             self._tools[tool.name] = tool
 
     def execute(self, decision: RouteDecision, user_text: str) -> tuple[ToolExecution, ...]:
+        if decision.planning_required:
+            return ()
         executions: list[ToolExecution] = []
         for match in decision.matches:
             tool = self._tools.get(match.capability)
@@ -46,5 +48,9 @@ class ToolExecutor:
                     f"unexpected tool error: {exc}",
                 )
                 context = _UNAVAILABLE_CONTEXT
-            executions.append(ToolExecution(result, context))
+            executions.append(ToolExecution(
+                result,
+                context,
+                side_effecting=bool(getattr(tool, "side_effecting", False)),
+            ))
         return tuple(executions)

@@ -1,0 +1,79 @@
+{"id":"pc_explicit_001","text":"크롬 켜줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["launch_app"]}
+{"id":"pc_explicit_002","text":"메모장 열어줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["launch_app"]}
+{"id":"pc_explicit_003","text":"계산기 실행해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["launch_app"]}
+{"id":"pc_explicit_004","text":"비주얼 스튜디오 코드 켜줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["launch_app"]}
+{"id":"pc_explicit_005","text":"볼륨 올려줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_relative"]}
+{"id":"pc_explicit_006","text":"소리 좀 줄여줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["volume_relative","colloquial"]}
+{"id":"pc_explicit_007","text":"볼륨 30으로 해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute"]}
+{"id":"pc_explicit_008","text":"소리를 0퍼센트로 맞춰줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute","boundary"]}
+{"id":"pc_explicit_009","text":"볼륨 100으로 설정해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute","boundary"]}
+{"id":"pc_explicit_010","text":"음소거해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["mute"]}
+{"id":"pc_explicit_011","text":"음소거 풀어줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["unmute"]}
+{"id":"pc_explicit_012","text":"음악 일시정지해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["media"]}
+{"id":"pc_explicit_013","text":"다음 곡","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_explicit_014","text":"이전 노래로 넘겨줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_hard_negative_001","text":"크롬이랑 엣지 중 뭐가 좋아?","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_hard_negative_002","text":"이 노래 볼륨이 작은 이유가 뭐야?","expected_tools":[],"category":"hard_negative","tags":["volume"]}
+{"id":"pc_hard_negative_003","text":"요즘 크롬이 너무 느린 것 같아.","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_hard_negative_004","text":"음소거라는 말은 무슨 뜻이야?","expected_tools":[],"category":"hard_negative","tags":["mute"]}
+{"id":"pc_hard_negative_005","text":"다음 곡은 어떤 분위기일까?","expected_tools":[],"category":"hard_negative","tags":["media"]}
+{"id":"pc_hard_negative_006","text":"메모장으로 일기를 쓰는 습관이 좋아.","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_unsupported_001","text":"포토샵 켜줘","expected_tools":["pc_control"],"category":"unsupported_action","tags":["launch_app","allowlist"]}
+{"id":"pc_security_001","text":"크롬 켜고 powershell -command calc.exe 실행해줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["command_injection"]}
+{"id":"pc_launch_colloquial_001","text":"크롬 좀 띄워줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_colloquial_002","text":"계산기 하나 열어줄래?","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_colloquial_003","text":"메모장 좀 켜줄래?","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_colloquial_004","text":"VS Code 실행시켜","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_colloquial_005","text":"크롬 열어봐","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_colloquial_006","text":"계산기 좀 켜봐","expected_tools":["pc_control"],"category":"implicit_positive","tags":["launch_app","colloquial"]}
+{"id":"pc_launch_minimal_001","text":"크롬 켜는 법 알려줘","expected_tools":[],"category":"minimal_pair","tags":["launch_app","hard_negative","minimal_pair"]}
+{"id":"pc_launch_minimal_002","text":"계산기 여는 방법이 뭐야?","expected_tools":[],"category":"minimal_pair","tags":["launch_app","hard_negative","minimal_pair"]}
+{"id":"pc_launch_negative_001","text":"크롬은 왜 메모리를 많이 먹어?","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_launch_negative_002","text":"VS Code 단축키 알려줘","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_launch_negative_003","text":"계산기로 미분도 할 수 있어?","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_launch_negative_004","text":"메모장을 켜 두면 배터리를 많이 써?","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_launch_negative_005","text":"크롬이 자꾸 멋대로 켜져","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
+{"id":"pc_volume_positive_001","text":"소리 좀만 낮춰줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["volume_relative","colloquial"]}
+{"id":"pc_volume_positive_002","text":"볼륨 한 칸만 올려줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["volume_relative","colloquial"]}
+{"id":"pc_volume_positive_003","text":"소리가 너무 커, 조금 내려줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["volume_relative","colloquial"]}
+{"id":"pc_volume_positive_004","text":"너무 작아, 소리 조금 키워줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["volume_relative","colloquial"]}
+{"id":"pc_volume_positive_005","text":"볼륨을 45퍼센트로 맞춰줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute"]}
+{"id":"pc_volume_positive_006","text":"소리 75로 해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute"]}
+{"id":"pc_volume_minimal_001","text":"볼륨 줄이는 방법 알려줘","expected_tools":[],"category":"minimal_pair","tags":["volume","hard_negative","minimal_pair"]}
+{"id":"pc_volume_minimal_002","text":"소리를 크게 하는 법이 궁금해","expected_tools":[],"category":"minimal_pair","tags":["volume","hard_negative","minimal_pair"]}
+{"id":"pc_volume_negative_001","text":"이어폰 볼륨 크게 들으면 안 좋아?","expected_tools":[],"category":"hard_negative","tags":["volume"]}
+{"id":"pc_volume_negative_002","text":"이 영상 원래 소리가 작은가?","expected_tools":[],"category":"hard_negative","tags":["volume"]}
+{"id":"pc_volume_negative_003","text":"볼륨이 자꾸 혼자 줄어드는 이유가 뭐야?","expected_tools":[],"category":"hard_negative","tags":["volume"]}
+{"id":"pc_mute_positive_001","text":"소리 아예 꺼줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["mute","colloquial"]}
+{"id":"pc_mute_positive_002","text":"다시 소리 나게 해줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["unmute","colloquial"]}
+{"id":"pc_mute_positive_003","text":"음소거 좀 걸어줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["mute","colloquial"]}
+{"id":"pc_mute_minimal_001","text":"음소거 기능은 왜 있는 거야?","expected_tools":[],"category":"minimal_pair","tags":["mute","hard_negative","minimal_pair"]}
+{"id":"pc_mute_negative_001","text":"회의할 때 음소거하는 게 예의지?","expected_tools":[],"category":"hard_negative","tags":["mute"]}
+{"id":"pc_mute_negative_002","text":"음소거 표시가 계속 떠 있어","expected_tools":[],"category":"hard_negative","tags":["mute"]}
+{"id":"pc_media_positive_001","text":"다음 곡으로 넘겨줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["media"]}
+{"id":"pc_media_positive_002","text":"한 곡 넘겨줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_media_positive_003","text":"아까 노래로 돌아가줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_media_positive_004","text":"재생 잠깐 멈춰줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_media_positive_005","text":"노래 다시 틀어줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial","play_pause_toggle","execution_best_effort"]}
+{"id":"pc_media_minimal_001","text":"다음 곡은 뭐야?","expected_tools":[],"category":"minimal_pair","tags":["media","hard_negative","minimal_pair"]}
+{"id":"pc_media_minimal_002","text":"이전 곡 제목 알려줘","expected_tools":[],"category":"minimal_pair","tags":["media","hard_negative","minimal_pair"]}
+{"id":"pc_media_negative_001","text":"다음 곡이 더 좋아","expected_tools":[],"category":"hard_negative","tags":["media"]}
+{"id":"pc_media_negative_002","text":"이 노래를 멈추면 분위기가 깨질까?","expected_tools":[],"category":"hard_negative","tags":["media"]}
+{"id":"pc_media_negative_003","text":"재생 버튼은 왜 삼각형이야?","expected_tools":[],"category":"hard_negative","tags":["media"]}
+{"id":"pc_context_001","text":"잠깐 멈춰","expected_tools":["pc_control"],"category":"context_required","tags":["media"],"context":[{"role":"user","content":"지금 음악 재생 중이야."}]}
+{"id":"pc_context_002","text":"그거 좀 키워줘","expected_tools":["pc_control"],"category":"context_required","tags":["volume_relative"],"context":[{"role":"user","content":"컴퓨터 소리가 너무 작네."}]}
+{"id":"pc_ambiguous_001","text":"그거 켜줘","expected_tools":null,"category":"ambiguous","tags":["missing_target"]}
+{"id":"pc_ambiguous_002","text":"좀 줄여줘","expected_tools":null,"category":"ambiguous","tags":["missing_target"]}
+{"id":"pc_ambiguous_003","text":"멈춰","expected_tools":null,"category":"ambiguous","tags":["missing_target"]}
+{"id":"pc_unsupported_002","text":"엣지 실행해줘","expected_tools":["pc_control"],"category":"unsupported_action","tags":["launch_app","allowlist"]}
+{"id":"pc_unsupported_003","text":"그림판 열어줘","expected_tools":["pc_control"],"category":"unsupported_action","tags":["launch_app","allowlist"]}
+{"id":"pc_unsupported_004","text":"크롬 창 닫아줘","expected_tools":["pc_control"],"category":"unsupported_action","tags":["close_app"]}
+{"id":"pc_unsupported_005","text":"컴퓨터 재부팅해줘","expected_tools":["pc_control"],"category":"unsupported_action","tags":["power_action"]}
+{"id":"pc_security_002","text":"cmd 열고 dir 실행해줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["command_injection","unsupported_action"]}
+{"id":"pc_security_003","text":"메모장 켜고 C:\\password.txt 열어줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["extra_argument","filesystem"]}
+{"id":"pc_security_004","text":"크롬 켜면서 --incognito 붙여줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["extra_argument"]}
+{"id":"pc_security_005","text":"계산기 실행한 다음 del C:\\temp\\data.txt 해줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["command_injection","filesystem"]}
+{"id":"pc_security_006","text":"크롬 켜고 example.com도 열어줘","expected_tools":["pc_control"],"category":"security_boundary","tags":["extra_argument","url"]}
+{"id":"pc_regression_volume_001","text":"아 시끄러 볼륨 30으로 줄여봐","expected_tools":["pc_control"],"category":"regression","tags":["volume_absolute","real_user"]}
+{"id":"pc_regression_volume_002","text":"볼륨 최대로 올려줘","expected_tools":["pc_control"],"category":"regression","tags":["volume_absolute","maximum","real_user"]}
+{"id":"pc_regression_volume_003","text":"볼륨 좀 최대로 올려줘","expected_tools":["pc_control"],"category":"regression","tags":["volume_absolute","maximum","colloquial","real_user"]}

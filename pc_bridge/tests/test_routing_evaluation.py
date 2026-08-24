@@ -6,7 +6,14 @@ from pathlib import Path
 import pytest
 
 from app.models import ChatMessage
-from app.routing import RoutingRequest, RuleBasedSemanticRouter, matches_weather_request
+from app.pc_control import RuleBasedPcActionParser, default_app_registry
+from app.routing import (
+    RoutingRequest,
+    RuleBasedSemanticRouter,
+    create_default_semantic_router,
+    matches_weather_request,
+)
+from app.tools import ToolExecutor
 from evaluation import (
     RoutingCase,
     RoutingContext,
@@ -17,6 +24,8 @@ from evaluation import (
 
 
 CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "cases" / "weather.jsonl"
+PC_CORPUS = CORPUS.with_name("pc_control.jsonl")
+CROSS_CORPUS = CORPUS.with_name("cross_capability.jsonl")
 
 
 def test_corpus_covers_semantic_boundary_categories() -> None:
@@ -136,3 +145,115 @@ def test_rule_router_preserves_weather_evaluation_baseline() -> None:
     report = evaluate_routing(load_corpus(CORPUS), predict, latency_iterations=1)
     weather = report.tool_metrics["weather"]
     assert (weather.true_positive, weather.false_positive, weather.false_negative) == (28, 8, 26)
+
+
+def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
+    pc_cases = load_corpus(PC_CORPUS)
+    cross_cases = load_corpus(CROSS_CORPUS)
+
+    assert {
+        "explicit_positive", "implicit_positive", "hard_negative", "minimal_pair",
+        "context_required", "ambiguous", "unsupported_action", "security_boundary",
+    } <= {
+        case.category for case in pc_cases
+    }
+    assert len(pc_cases) == 79
+    assert len(cross_cases) == 34
+    assert sum("minimal_pair" in case.tags for case in pc_cases) >= 7
+    assert any(case.expected_tools == frozenset({"weather", "pc_control"}) for case in cross_cases)
+    assert any(case.category == "planning_required" for case in cross_cases)
+    assert any(case.expected_tools == frozenset() for case in cross_cases)
+
+
+def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
+    router = create_default_semantic_router(default_app_registry())
+
+    def predict(case: RoutingCase) -> set[str]:
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        return set(router.route(RoutingRequest(case.text, history)).required_capabilities)
+
+    pc_report = evaluate_routing(load_corpus(PC_CORPUS), predict, latency_iterations=1)
+    cross_report = evaluate_routing(load_corpus(CROSS_CORPUS), predict, latency_iterations=1)
+
+    pc = pc_report.tool_metrics["pc_control"]
+    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (48, 0, 2)
+    cross_pc = cross_report.tool_metrics["pc_control"]
+    cross_weather = cross_report.tool_metrics["weather"]
+    assert (cross_pc.true_positive, cross_pc.false_positive, cross_pc.false_negative) == (22, 0, 0)
+    assert (
+        cross_weather.true_positive,
+        cross_weather.false_positive,
+        cross_weather.false_negative,
+    ) == (17, 3, 2)
+
+
+def test_all_planning_cases_preserve_capabilities_and_block_execution() -> None:
+    router = create_default_semantic_router(default_app_registry())
+    cases = [
+        case for case in load_corpus(CROSS_CORPUS)
+        if case.category == "planning_required"
+    ]
+    decisions = []
+    for case in cases:
+        history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
+        decisions.append(router.route(RoutingRequest(case.text, history)))
+
+    assert len(cases) == 7
+    assert all(decision.planning_required for decision in decisions)
+    assert all(
+        decision.required_capabilities == {"weather", "pc_control"}
+        for decision in decisions
+    )
+    class MustNotRunTool:
+        name = "pc_control"
+
+        def run(self, user_text):
+            raise AssertionError(f"PC side effect attempted for: {user_text}")
+
+        def build_llm_context(self, result):
+            raise AssertionError("planning-required result should not exist")
+
+    executor = ToolExecutor((MustNotRunTool(),))
+    assert all(executor.execute(decision, case.text) == () for case, decision in zip(
+        cases, decisions,
+    ))
+
+
+def test_corpus_distinguishes_capability_routing_from_execution_support() -> None:
+    apps = default_app_registry()
+    router = create_default_semantic_router(apps)
+    parser = RuleBasedPcActionParser(apps)
+    cases = load_corpus(PC_CORPUS)
+    unsupported = [
+        case for case in cases
+        if case.category in {"unsupported_action", "security_boundary"}
+    ]
+
+    assert unsupported
+    assert all(
+        "pc_control" in router.route(RoutingRequest(case.text)).required_capabilities
+        for case in unsupported
+    )
+    assert all(not parser.parse(case.text).ok for case in unsupported)
+
+
+def test_corpus_preserves_paths_natural_urls_and_toggle_semantics() -> None:
+    cases = {case.case_id: case for case in load_corpus(PC_CORPUS)}
+
+    assert cases["pc_security_003"].text == r"메모장 켜고 C:\password.txt 열어줘"
+    assert cases["pc_security_005"].text == r"계산기 실행한 다음 del C:\temp\data.txt 해줘"
+    assert cases["pc_security_006"].text == "크롬 켜고 example.com도 열어줘"
+    assert not any("](" in case.text for case in cases.values())
+    assert "execution_best_effort" in cases["pc_media_positive_005"].tags
+
+
+def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:
+    apps = default_app_registry()
+    default_router = create_default_semantic_router(apps)
+    old_router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+
+    for case in load_corpus(CORPUS):
+        request = RoutingRequest(case.text)
+        old_weather = "weather" in old_router.route(request).required_capabilities
+        new_weather = "weather" in default_router.route(request).required_capabilities
+        assert new_weather == old_weather, case.case_id

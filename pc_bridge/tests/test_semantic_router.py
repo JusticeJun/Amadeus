@@ -5,10 +5,12 @@ import pytest
 
 from app.routing import (
     CapabilityMatch,
+    create_default_semantic_router,
     RouteDecision,
     RoutingRequest,
     RuleBasedSemanticRouter,
 )
+from app.pc_control import AppDefinition, AppRegistry
 from app.tools import ToolExecutor
 from app.tools.base import ToolResult
 
@@ -112,3 +114,49 @@ def test_route_decision_rejects_invalid_confidence_and_duplicate_capabilities() 
         CapabilityMatch("weather", 1.1)
     with pytest.raises(ValueError, match="duplicate"):
         RouteDecision((CapabilityMatch("weather"), CapabilityMatch("weather")))
+
+
+def _routing_apps() -> AppRegistry:
+    return AppRegistry((
+        AppDefinition("chrome", frozenset({"chrome", "크롬"}), ()),
+        AppDefinition("notepad", frozenset({"notepad", "메모장"}), ()),
+    ))
+
+
+def test_default_router_selects_pc_control_without_keyword_hard_negatives() -> None:
+    router = create_default_semantic_router(_routing_apps())
+
+    assert router.route(RoutingRequest("크롬 켜줘")).required_capabilities == {
+        "pc_control",
+    }
+    assert router.route(RoutingRequest("소리 좀 작게 해줘")).required_capabilities == {
+        "pc_control",
+    }
+    assert not router.route(RoutingRequest("크롬이랑 엣지 중 뭐가 좋아?")).matches
+    assert not router.route(RoutingRequest("이 노래 볼륨이 작은 이유가 뭐야?")).matches
+
+
+def test_default_router_supports_independent_multilabel_requests() -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(
+        RoutingRequest("오늘 날씨 알려주고 크롬 켜줘")
+    )
+
+    assert decision.required_capabilities == {"weather", "pc_control"}
+    assert not decision.planning_required
+
+
+def test_conditional_multitool_request_is_preserved_but_not_executed() -> None:
+    weather = StubTool("weather")
+    pc_control = StubTool("pc_control")
+    decision = create_default_semantic_router(_routing_apps()).route(
+        RoutingRequest("오늘 비 오면 크롬 켜줘")
+    )
+
+    executions = ToolExecutor([weather, pc_control]).execute(decision, "오늘 비 오면 크롬 켜줘")
+
+    assert decision.required_capabilities == {"weather", "pc_control"}
+    assert decision.planning_required
+    assert decision.planning_reason == "conditional_tool_dependency"
+    assert executions == ()
+    assert weather.calls == []
+    assert pc_control.calls == []

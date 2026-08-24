@@ -13,6 +13,7 @@ class ToolResult:
 
 class Tool(Protocol):
     name: str
+    side_effecting: bool
 
     def run(self, user_text: str) -> ToolResult: ...
 
@@ -23,3 +24,4 @@ class Tool(Protocol):
 class ToolExecution:
     result: ToolResult
     llm_context: str
+    side_effecting: bool = False

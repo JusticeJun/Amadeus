@@ -151,6 +151,19 @@ conversation bypasses it. The tool returns compact facts only; Groq still writes
 Chris's final reply and selects the emotion. See `docs/tools.md` for the extension
 contract used by future tools.
 
+## Windows PC control
+
+The bridge supports a small allowlisted set of deterministic Windows actions:
+
+- launch Chrome, Notepad, Calculator, or VS Code;
+- raise or lower volume by 10 points, set volume from 0 to 100, and mute/unmute;
+- send OS-level play/pause, next, or previous media keys on a best-effort basis.
+
+Examples include `크롬 켜줘`, `소리 좀 줄여줘`, `볼륨 30으로 해줘`, and
+`다음 곡 넘겨줘`. Arbitrary commands, arguments, URLs, file operations, and
+shell execution are not supported. Conditional multi-tool requests are not
+executed until a planner can safely enforce their dependency.
+
 ## Common problems
 
 - `COM3 access denied`: close PlatformIO Monitor or another serial program.

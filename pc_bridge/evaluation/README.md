@@ -6,6 +6,13 @@ Each file under `cases/` evaluates one pilot capability. New capabilities can ad
 
 Cases may optionally include `tags`, `intent`, `reason`, and prior `context`. These fields document cross-cutting failure modes and preserve future context-aware evaluation without affecting the current rule matcher.
 
+Side-effecting capabilities should emphasize hard negatives, minimal pairs,
+unsupported actions, and safety boundaries. An `unsupported_action` still labels
+the requested capability when the user is asking for that external action; it
+does not imply that the production tool may execute it. A `planning_required`
+case preserves every required capability while documenting that unconditional
+fast-path execution is unsafe without dependency-aware planning.
+
 Run the current rule-based Weather matcher against the corpus:
 
 ```bash
