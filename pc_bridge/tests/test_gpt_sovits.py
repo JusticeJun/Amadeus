@@ -132,6 +132,16 @@ def test_temperature_range_is_spoken_naturally() -> None:
     assert normalize_tts_text("오늘은 25~30도야.") == "오늘은 이십 오 도에서 삼십 도야."
 
 
+def test_volume_values_are_normalized_without_rewriting_unrelated_numbers() -> None:
+    assert normalize_tts_text("볼륨을 30으로 줄였어.") == (
+        "볼륨을 삼십 퍼센트로 줄였어."
+    )
+    assert normalize_tts_text("소리 25로 맞췄어.") == "소리 이십 오 퍼센트로 맞췄어."
+    assert normalize_tts_text("회의는 30일이고 번호는 1234야.") == (
+        "회의는 30일이고 번호는 1234야."
+    )
+
+
 def test_explicit_auxiliary_reference_is_selected(tmp_path: Path, monkeypatch) -> None:
     settings = make_settings(tmp_path)
     values = dict(settings.__dict__)

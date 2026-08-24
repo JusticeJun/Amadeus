@@ -83,6 +83,12 @@ _NUMBER = r"-?\d+(?:\.\d+)?"
 
 
 def _normalize_spoken_measurements(text: str) -> str:
+    text = re.sub(
+        rf"((?:볼륨|소리)(?:을|를)?\s*)({_NUMBER})\s*(?:%|퍼센트)?(으로|로)",
+        lambda match: f"{match.group(1)}{_number_to_korean(match.group(2))} 퍼센트로",
+        text,
+        flags=re.IGNORECASE,
+    )
     replacements = (
         (rf"({_NUMBER})\s*[~\-]\s*({_NUMBER})\s*(?:°?C(?![A-Za-z])|도)",
          lambda match: f"{_number_to_korean(match.group(1))} 도에서 "
