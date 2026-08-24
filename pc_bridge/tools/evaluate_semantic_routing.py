@@ -12,11 +12,8 @@ BRIDGE_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BRIDGE_ROOT))
 
 from app.models import ChatMessage  # noqa: E402
-from app.routing import (  # noqa: E402
-    RoutingRequest,
-    RuleBasedSemanticRouter,
-    matches_weather_request,
-)
+from app.pc_control import default_app_registry  # noqa: E402
+from app.routing import RoutingRequest, create_default_semantic_router  # noqa: E402
 from evaluation import RoutingCase, evaluate_routing, load_corpora  # noqa: E402
 
 
@@ -34,7 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+    router = create_default_semantic_router(default_app_registry())
 
     def predict(case: RoutingCase) -> set[str]:
         history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)

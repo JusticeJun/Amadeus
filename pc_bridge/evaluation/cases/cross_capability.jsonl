@@ -1,0 +1,10 @@
+{"id":"cross_weather_pc_001","text":"오늘 날씨 알려주고 크롬 켜줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"cross_weather_pc_002","text":"지금 몇 도인지 확인하고 메모장도 열어줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"cross_weather_pc_003","text":"오늘 비 오는지 알려주고 볼륨 30으로 해줘","expected_tools":["weather","pc_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"cross_pc_only_001","text":"날씨는 됐고 볼륨 좀 줄여줘","expected_tools":["pc_control"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_pc_only_002","text":"비 얘기는 그만하고 크롬이나 켜줘","expected_tools":["pc_control"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"cross_negative_001","text":"비 오는 날 크롬으로 음악 듣는 게 좋더라","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_002","text":"날씨 앱이랑 크롬 중에 뭐가 더 무거워?","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_negative_003","text":"볼륨 큰 음악은 비 오는 날 잘 어울려.","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"cross_planning_001","text":"오늘 비 오면 크롬 켜줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}
+{"id":"cross_planning_002","text":"날씨가 나쁘면 음악을 일시정지해줘","expected_tools":["weather","pc_control"],"category":"planning_required","tags":["conditional_dependency"]}

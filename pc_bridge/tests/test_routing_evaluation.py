@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from app.models import ChatMessage
-from app.routing import RoutingRequest, RuleBasedSemanticRouter, matches_weather_request
+from app.pc_control import default_app_registry
+from app.routing import (
+    RoutingRequest,
+    RuleBasedSemanticRouter,
+    create_default_semantic_router,
+    matches_weather_request,
+)
 from evaluation import (
     RoutingCase,
     RoutingContext,
@@ -17,6 +23,8 @@ from evaluation import (
 
 
 CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "cases" / "weather.jsonl"
+PC_CORPUS = CORPUS.with_name("pc_control.jsonl")
+CROSS_CORPUS = CORPUS.with_name("cross_capability.jsonl")
 
 
 def test_corpus_covers_semantic_boundary_categories() -> None:
@@ -136,3 +144,46 @@ def test_rule_router_preserves_weather_evaluation_baseline() -> None:
     report = evaluate_routing(load_corpus(CORPUS), predict, latency_iterations=1)
     weather = report.tool_metrics["weather"]
     assert (weather.true_positive, weather.false_positive, weather.false_negative) == (28, 8, 26)
+
+
+def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
+    pc_cases = load_corpus(PC_CORPUS)
+    cross_cases = load_corpus(CROSS_CORPUS)
+
+    assert {"explicit_positive", "implicit_positive", "hard_negative"} <= {
+        case.category for case in pc_cases
+    }
+    assert any(case.category == "security_boundary" for case in pc_cases)
+    assert any(case.expected_tools == frozenset({"weather", "pc_control"}) for case in cross_cases)
+    assert any(case.category == "planning_required" for case in cross_cases)
+    assert any(case.expected_tools == frozenset() for case in cross_cases)
+
+
+def test_default_router_matches_pc_and_cross_capability_corpora() -> None:
+    router = create_default_semantic_router(default_app_registry())
+
+    def predict(case: RoutingCase) -> set[str]:
+        return set(router.route(RoutingRequest(case.text)).required_capabilities)
+
+    report = evaluate_routing(
+        load_corpora((PC_CORPUS, CROSS_CORPUS)),
+        predict,
+        latency_iterations=1,
+    )
+
+    assert report.tool_metrics["pc_control"].precision == 1.0
+    assert report.tool_metrics["pc_control"].recall == 1.0
+    assert report.tool_metrics["weather"].precision == 1.0
+    assert report.tool_metrics["weather"].recall == 1.0
+
+
+def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:
+    apps = default_app_registry()
+    default_router = create_default_semantic_router(apps)
+    old_router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+
+    for case in load_corpus(CORPUS):
+        request = RoutingRequest(case.text)
+        old_weather = "weather" in old_router.route(request).required_capabilities
+        new_weather = "weather" in default_router.route(request).required_capabilities
+        assert new_weather == old_weather, case.case_id

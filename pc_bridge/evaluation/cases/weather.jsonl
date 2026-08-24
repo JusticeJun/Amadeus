@@ -70,11 +70,11 @@
 {"id":"weather_hard_negative_030","text":"미세먼지는 왜 생겨?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require live air-quality data."}
 {"id":"weather_hard_negative_031","text":"자외선이 피부에 왜 안 좋아?","expected_tools":[],"category":"hard_negative","tags":["general_knowledge"],"reason":"This is general knowledge and does not require a live UV lookup."}
 {"id":"weather_negative_001","text":"오늘 기분 어때?","expected_tools":[],"category":"negative"}
-{"id":"weather_negative_002","text":"크롬 켜줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_002","text":"크롬 켜줘.","expected_tools":["pc_control"],"category":"cross_capability"}
 {"id":"weather_negative_003","text":"내일 일정 알려줘.","expected_tools":[],"category":"negative"}
 {"id":"weather_negative_004","text":"일정 관리 잘하는 법 알려줘.","expected_tools":[],"category":"negative"}
 {"id":"weather_negative_005","text":"크롬이랑 엣지 중 뭐가 좋아?","expected_tools":[],"category":"negative"}
-{"id":"weather_negative_006","text":"볼륨을 30%로 해줘.","expected_tools":[],"category":"negative"}
+{"id":"weather_negative_006","text":"볼륨을 30%로 해줘.","expected_tools":["pc_control"],"category":"cross_capability"}
 {"id":"weather_mixed_001","text":"날씨가 안 좋아서 기분도 별론데 오늘 비 계속 와?","expected_tools":["weather"],"category":"mixed_intent","intent":"emotional_conversation"}
 {"id":"weather_mixed_002","text":"오늘 비 와? 난 비 오는 날 좋아하는데.","expected_tools":["weather"],"category":"mixed_intent","intent":"conversation"}
 {"id":"weather_mixed_003","text":"요즘 좀 우울한데 내일도 이렇게 흐릴까?","expected_tools":["weather"],"category":"mixed_intent","intent":"emotional_conversation"}

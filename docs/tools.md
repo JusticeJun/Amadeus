@@ -44,3 +44,21 @@ WEATHER_TIMEOUT_SECONDS=8
 
 Both encoded and decoded service keys issued by data.go.kr are accepted. Do not
 commit `pc_bridge/.env`.
+
+## Windows PC control tool
+
+`pc_control` converts supported requests into validated `PcAction` values before
+calling the Windows adapter. App launches are restricted to Chrome, Notepad,
+Calculator, and VS Code, use resolved executable paths, and always run with
+`shell=False`. The first release also supports volume changes in 10-point steps,
+absolute volume from 0 to 100, mute/unmute, and best-effort system media keys for
+play/pause, next, and previous.
+
+The parser is behind a `PcActionParser` protocol so action extraction can be
+replaced without coupling it to semantic capability routing or OS calls. Tests
+use injected fake controllers and do not change the workstation.
+
+Independent requests such as `오늘 날씨 알려주고 크롬 켜줘` may execute both
+tools. Conditional requests such as `비 오면 크롬 켜줘` retain both capabilities
+in `RouteDecision`, but are marked `planning_required` and execute nothing until
+a dependency-aware planner is implemented.
