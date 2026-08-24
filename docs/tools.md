@@ -1,17 +1,27 @@
 # PC Bridge tools
 
 Tools provide facts or action results to the conversation pipeline. They do not
-write Chris's final reply. `ToolRouter` selects a matching tool, the tool returns
-a compact `ToolResult`, and Groq turns that context into the final reply and
-emotion before TTS and ESP32 state output.
+write Chris's final reply. A `SemanticRouter` selects the external capabilities
+required by the request, and `ToolExecutor` runs the registered tools. Each tool
+returns a compact `ToolResult` and builds capability-specific LLM context. Groq
+turns the collected context into the final reply and emotion before TTS and
+ESP32 state output.
 
 ```text
-user input -> ToolRouter -> optional ToolResult -> Groq -> emotion -> TTS -> ESP32
+user input -> SemanticRouter -> RouteDecision -> ToolExecutor
+           -> Tool results -> Groq -> emotion -> TTS -> ESP32
 ```
 
-Add future capabilities under `pc_bridge/app/tools/` and register them in
-`pc_bridge/app/cli.py`. Keep routing narrow, credentials in environment
-variables, responses compact, and failures isolated from the main conversation.
+Routing backends live under `pc_bridge/app/routing/`; external capability
+implementations live under `pc_bridge/app/tools/`. Register both in
+`pc_bridge/app/cli.py`. `RouteDecision` supports more than one capability, while
+the current rule backend remains a local fast path. Confidence fallback and
+dependency-aware planning are intentionally separate future layers rather than
+responsibilities of tools.
+
+Keep credentials in environment variables, Tool results compact, and failures
+isolated from the main conversation. The evaluation corpus is a holdout asset
+for comparing routing backends and must not be used as classifier training data.
 
 ## KMA weather tool
 

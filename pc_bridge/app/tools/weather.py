@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
 import math
-import re
 import socket
 import urllib.error
 import urllib.parse
@@ -58,53 +57,6 @@ class KmaWeatherTool:
             if latitude is not None and longitude is not None else None
         )
 
-    def matches(self, user_text: str) -> bool:
-        text = "".join(user_text.lower().split())
-        time_context = any(word in text for word in (
-            "지금", "현재", "오늘", "내일", "저녁", "밤", "아침", "오후", "퇴근",
-        ))
-        outdoor_context = any(word in text for word in ("밖", "바깥", "외부", "나갈", "외출"))
-        request_intent = any(word in text for word in (
-            "어때", "어떻", "알려", "봐줘", "확인", "궁금", "몇도",
-            "할까", "올까", "오는지", "내릴까", "필요", "챙겨", "입어야",
-        )) or text.endswith(("?", "니", "냐", "지"))
-        observation_intent = any(word in text for word in (
-            "좋네", "좋다", "맑네", "흐리네", "덥네", "춥네", "쌀쌀하네",
-            "따뜻하네", "선선하네", "습하네", "후덥지근",
-        ))
-        conceptual_context = any(word in text for word in (
-            "단어", "뜻", "의미", "차이", "개념", "원리", "설명해",
-        ))
-
-        explicit_subject = any(word in text for word in (
-            "날씨", "기온", "온도", "습도", "강수", "일기예보",
-        ))
-        temperature_expression = any(word in text for word in (
-            "덥", "더워", "더운", "더우", "춥", "추워", "추울", "추우", "쌀쌀", "따뜻",
-            "선선", "습", "후덥", "몇도",
-        ))
-        precipitation_expression = bool(re.search(
-            r"(?:비|눈)(?:가|는|이)?(?:와|오|올|내리|예보|확률)", text
-        ))
-        precipitation_request = any(word in text for word in (
-            "비올까", "비가올까", "비오는지", "비가오는지", "비와?", "비가와?",
-            "눈올까", "눈이올까", "눈오는지", "눈이오는지", "눈와?", "눈이와?",
-            "내릴까", "강수확률", "비예보", "눈예보",
-        ))
-        umbrella_expression = "우산" in text and any(
-            word in text for word in ("필요", "챙", "가져", "써야")
-        )
-
-        if explicit_subject and (request_intent or observation_intent) \
-                and not (conceptual_context and not (time_context or outdoor_context)):
-            return True
-        if (time_context or outdoor_context) and temperature_expression \
-                and (request_intent or observation_intent):
-            return True
-        if precipitation_expression and (time_context or outdoor_context or precipitation_request):
-            return True
-        return umbrella_expression and (time_context or outdoor_context or request_intent)
-
     def run(self, user_text: str) -> ToolResult:
         if not self._service_key:
             return ToolResult(self.name, False, {}, "KMA_SERVICE_KEY is empty")
@@ -131,6 +83,25 @@ class KmaWeatherTool:
             return ToolResult(self.name, False, {}, str(exc))
         except Exception as exc:  # Never let a tool terminate the bridge.
             return ToolResult(self.name, False, {}, f"unexpected weather error: {exc}")
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        if not result.ok:
+            return (
+                "요청한 날씨 정보를 지금 확인하지 못했다. 내부 오류, API, 도구나 시스템을 "
+                "언급하지 말고 지금은 확인할 수 없다고 크리스의 말투로 짧게 답한다."
+            )
+        compact = json.dumps(result.data, ensure_ascii=False, separators=(",", ":"))
+        return (
+            f"검증된 외부 정보: {compact}\n"
+            "이 데이터만 사실 근거로 사용하고 구조를 낭독하지 않는다. location은 조회 지점의 "
+            "이름일 뿐 지리나 주변 환경의 근거가 아니다. 데이터에 없는 하늘 상태, 체감, 지역 특성, "
+            "활동 적합성이나 추천을 절대 만들어내지 않는다. 강수가 없다는 사실만으로 맑다고 "
+            "표현하지 말고 sky 값이 있을 때만 하늘 상태를 말한다. 현재 날씨 질문에는 제공된 기온, "
+            "습도, 강수, 바람, sky만 자연스러운 한두 문장으로 답한다. interaction_mode가 "
+            "casual_observation이면 정보 요청이 아니라 일상적인 말에 대한 반응이므로 수치를 나열하거나 "
+            "예보를 보고하지 말고, 관련된 실제 날씨를 반영해 친구처럼 짧고 자연스럽게 받아준다. "
+            "이때 데이터에 없는 장소, 풍경, 외출 활동, 적합성, 추천을 연상해서 덧붙이지 않는다."
+        )
 
     def _now(self) -> datetime:
         value = self._clock()
