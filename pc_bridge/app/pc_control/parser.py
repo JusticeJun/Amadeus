@@ -40,7 +40,7 @@ class RuleBasedPcActionParser:
 
         volume_subject = "볼륨" in compact or "소리" in compact
         maximum = volume_subject and bool(re.search(
-            r"(?:볼륨|소리)(?:을|를)?(?:최대|최대치)(?:로|으로)?"
+            r"(?:볼륨|소리)(?:을|를)?(?:좀|아예)?(?:최대|최대치)(?:로|으로)?"
             r"(?:해줘|해봐|맞춰(?:줘|봐)?|설정(?:해줘|해봐)?|"
             r"올려(?:줘|봐)|높여(?:줘|봐)|키워(?:줘|봐)?)",
             compact,

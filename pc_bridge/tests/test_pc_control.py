@@ -75,6 +75,9 @@ def test_parser_extracts_only_supported_structured_actions(app_registry: AppRegi
     assert parser.parse("볼륨 최대로 올려줘").actions == (
         PcAction(PcActionType.SET_VOLUME, amount=100),
     )
+    assert parser.parse("볼륨 좀 최대로 올려줘").actions == (
+        PcAction(PcActionType.SET_VOLUME, amount=100),
+    )
     assert parser.parse("볼륨 최대치로 해줘").actions == (
         PcAction(PcActionType.SET_VOLUME, amount=100),
     )
