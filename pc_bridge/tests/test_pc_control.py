@@ -63,6 +63,15 @@ def test_parser_extracts_only_supported_structured_actions(app_registry: AppRegi
     assert parser.parse("볼륨 30으로 해줘").actions == (
         PcAction(PcActionType.SET_VOLUME, amount=30),
     )
+    assert parser.parse("아 시끄러 볼륨 30으로 줄여봐").actions == (
+        PcAction(PcActionType.SET_VOLUME, amount=30),
+    )
+    assert parser.parse("소리 30으로 맞춰줘").actions == (
+        PcAction(PcActionType.SET_VOLUME, amount=30),
+    )
+    assert parser.parse("볼륨을 30퍼센트로 줄여줘").actions == (
+        PcAction(PcActionType.SET_VOLUME, amount=30),
+    )
     assert parser.parse("음소거해줘").actions == (PcAction(PcActionType.MUTE),)
     assert parser.parse("음소거 풀어줘").actions == (PcAction(PcActionType.UNMUTE),)
     assert parser.parse("다음 곡 넘겨줘").actions == (PcAction(PcActionType.MEDIA_NEXT),)

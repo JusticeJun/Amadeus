@@ -157,7 +157,7 @@ def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
     } <= {
         case.category for case in pc_cases
     }
-    assert len(pc_cases) == 76
+    assert len(pc_cases) == 77
     assert len(cross_cases) == 34
     assert sum("minimal_pair" in case.tags for case in pc_cases) >= 7
     assert any(case.expected_tools == frozenset({"weather", "pc_control"}) for case in cross_cases)
@@ -176,7 +176,7 @@ def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
     cross_report = evaluate_routing(load_corpus(CROSS_CORPUS), predict, latency_iterations=1)
 
     pc = pc_report.tool_metrics["pc_control"]
-    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (45, 0, 2)
+    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (46, 0, 2)
     cross_pc = cross_report.tool_metrics["pc_control"]
     cross_weather = cross_report.tool_metrics["weather"]
     assert (cross_pc.true_positive, cross_pc.false_positive, cross_pc.false_negative) == (22, 0, 0)

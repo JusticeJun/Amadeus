@@ -47,6 +47,16 @@ class CapturingLlm(LlmClient):
         return LlmResult(reply="오늘은 비가 올 수 있겠네.")
 
 
+class RepeatingLlm(LlmClient):
+    def __init__(self, reply: str) -> None:
+        self.reply = reply
+        self.histories = []
+
+    def complete(self, user_text, history):
+        self.histories.append(history)
+        return LlmResult(reply=self.reply)
+
+
 class StubWeatherTool:
     name = "weather"
 
@@ -65,6 +75,17 @@ class StubMediaTool:
 
     def build_llm_context(self, result: ToolResult) -> str:
         return '검증된 실행 결과: {"action":"playing"}'
+
+
+class FailedSideEffectTool:
+    name = "pc_control"
+    side_effecting = True
+
+    def run(self, user_text: str) -> ToolResult:
+        return ToolResult("pc_control", False, {}, "unsupported_action")
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        return "검증된 실행 결과: 요청한 조작은 실행되지 않았다."
 
 
 class CapturingTts(TtsEngine):
@@ -182,3 +203,49 @@ def test_planning_required_request_executes_no_tools_and_informs_character_llm()
     assert not any(item.content.startswith("검증된 외부 정보") for item in llm.history)
     assert not any(item.content.startswith("검증된 실행 결과") for item in llm.history)
     assert any("어떤 기능도 실행하지 않았다" in item.content for item in llm.history)
+
+
+def test_failed_side_effect_cannot_be_reported_as_success() -> None:
+    llm = RepeatingLlm("볼륨을 30으로 줄였어!")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["볼륨 30으로 줄여봐", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({"pc_control": lambda request: True}),
+        tool_executor=ToolExecutor([FailedSideEffectTool()]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert any(
+        "실제 조작은 실패했고 변경된 것은 없다" in item.content
+        for item in llm.histories[-1]
+    )
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
+def test_planning_reply_cannot_claim_success_or_offer_unrelated_advice() -> None:
+    llm = RepeatingLlm("볼륨을 줄일 수는 없지만, 시원한 음료 한잔 어때?")
+    tts = CapturingTts()
+    router = RuleBasedSemanticRouter(
+        {"weather": lambda request: True, "pc_control": lambda request: True},
+        planning_detectors=(lambda request, capabilities: "conditional_dependency",),
+    )
+    manager = ConversationManager(
+        SequenceInput(["밖에 더우면 볼륨 내려줘", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=router,
+        tool_executor=ToolExecutor([StubWeatherTool(), FailedSideEffectTool()]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert tts.results[0].reply == "그렇게 조건을 걸어서 조작하는 건 아직 못 해."

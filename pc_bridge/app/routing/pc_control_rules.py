@@ -30,7 +30,8 @@ def matches_pc_control_request(request: RoutingRequest, apps: AppRegistry) -> bo
     volume_subject = "볼륨" in text or "소리" in text
     volume_absolute = volume_subject and bool(re.search(
         r"(?:볼륨|소리)(?:을|를)?\d{1,3}(?:%|퍼센트)?(?:로|으로)?"
-        r"(?:해줘|맞춰|설정|해봐)",
+        r"(?:해줘|해봐|맞춰(?:줘|봐)?|설정(?:해줘|해봐)?|"
+        r"줄여(?:줘|봐)|낮춰(?:줘|봐)|올려(?:줘|봐))",
         text,
     ))
     volume_relative = volume_subject and any(

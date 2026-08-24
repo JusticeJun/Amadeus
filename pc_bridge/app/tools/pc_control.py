@@ -8,6 +8,7 @@ from .base import ToolResult
 
 class PcControlTool:
     name = "pc_control"
+    side_effecting = True
 
     def __init__(self, parser: PcActionParser, controller: PcController) -> None:
         self._parser = parser
