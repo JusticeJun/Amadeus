@@ -80,6 +80,9 @@ class Settings:
         r"C:\Program Files\Google\Chrome\Application\chrome.exe"
     )
     apple_music_profile_dir: Path = Path()
+    music_semantic_llm_enabled: bool = True
+    music_semantic_model: str = ""
+    music_semantic_reasoning_effort: str = "medium"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -135,4 +138,9 @@ class Settings:
                 str(Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
                     / "Amadeus" / "AppleMusicChrome"),
             )),
+            music_semantic_llm_enabled=_bool("MUSIC_SEMANTIC_LLM_ENABLED", True),
+            music_semantic_model=os.getenv("MUSIC_SEMANTIC_MODEL", ""),
+            music_semantic_reasoning_effort=os.getenv(
+                "MUSIC_SEMANTIC_REASONING_EFFORT", "medium",
+            ).lower(),
         )
