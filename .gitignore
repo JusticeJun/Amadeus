@@ -31,6 +31,10 @@ pc_bridge/.venv/
 pc_bridge/.pytest_cache/
 pc_bridge/.env
 
+# Isolated Apple Music browser profile and CDP state
+pc_bridge/apple-music-profile/
+AppleMusicChrome/
+
 # Third-party GPT-SoVITS runtime, virtual environment, and model weights
 tools/GPT-SoVITS/
 tools/gpt-sovits-runtime/

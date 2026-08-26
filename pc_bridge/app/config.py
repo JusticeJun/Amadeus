@@ -73,6 +73,13 @@ class Settings:
     amadeus_latitude: float | None = None
     amadeus_longitude: float | None = None
     weather_timeout_seconds: float = 8.0
+    apple_music_cdp_port: int = 9223
+    apple_music_timeout_seconds: float = 8.0
+    apple_music_playlist_cache_seconds: float = 60.0
+    apple_music_chrome_path: Path = Path(
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    )
+    apple_music_profile_dir: Path = Path()
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -114,4 +121,18 @@ class Settings:
             amadeus_latitude=_optional_float("AMADEUS_LATITUDE"),
             amadeus_longitude=_optional_float("AMADEUS_LONGITUDE"),
             weather_timeout_seconds=float(os.getenv("WEATHER_TIMEOUT_SECONDS", "8")),
+            apple_music_cdp_port=int(os.getenv("APPLE_MUSIC_CDP_PORT", "9223")),
+            apple_music_timeout_seconds=float(os.getenv("APPLE_MUSIC_TIMEOUT_SECONDS", "8")),
+            apple_music_playlist_cache_seconds=float(os.getenv(
+                "APPLE_MUSIC_PLAYLIST_CACHE_SECONDS", "60",
+            )),
+            apple_music_chrome_path=Path(os.getenv(
+                "APPLE_MUSIC_CHROME_PATH",
+                r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            )),
+            apple_music_profile_dir=Path(os.getenv(
+                "APPLE_MUSIC_PROFILE_DIR",
+                str(Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+                    / "Amadeus" / "AppleMusicChrome"),
+            )),
         )
