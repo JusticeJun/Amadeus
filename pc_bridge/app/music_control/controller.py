@@ -123,7 +123,7 @@ class AppleMusicPwaController:
                 **({"warning": snapshot.warning} if snapshot.warning else {}),
             }
         if kind is MusicActionType.PLAY_PLAYLIST:
-            playlist = self._playlist(action.playlist)
+            playlist = self._playlist(action.playlist, action.alternate_queries)
             queue = self._backend.load_playlist(playlist.playlist_id)
             if not queue:
                 raise MusicControlError("not_found", "playlist is empty")
@@ -132,9 +132,11 @@ class AppleMusicPwaController:
                 "playlist": playlist.name, "queue_length": len(queue),
             }
         if kind is MusicActionType.PLAY_PLAYLIST_TRACK:
-            playlist = self._playlist(action.playlist)
+            playlist = self._playlist(action.playlist, action.alternate_queries)
             queue = self._backend.load_playlist(playlist.playlist_id)
-            expected, index = _unique_music_match(queue, action.title, action.artist)
+            expected, index = _unique_music_match(
+                queue, action.title, action.artist, action.alternate_queries,
+            )
             actual = self._backend.play_queue_item(index)
             return _verified_data(actual, expected) | {
                 "playlist": playlist.name, "queue_position": index,
@@ -158,7 +160,7 @@ class AppleMusicPwaController:
             )
             return _verified_data(self._backend.play_song(expected.item_id), expected)
         if kind is MusicActionType.PLAY_ARTIST:
-            artist = self._resolve_artist(action.artist)
+            artist = self._resolve_artist(action.artist, action.alternate_queries)
             candidates = self._backend.search_artists(artist)
             expected = _unique_match(candidates, artist, lambda item: item.artist)
             actual = self._backend.play_artist(expected.item_id)
@@ -206,25 +208,38 @@ class AppleMusicPwaController:
         self._personal_cache = (now, snapshot)
         return snapshot
 
-    def _playlist(self, name: str) -> PlaylistItem:
+    def _playlist(self, name: str, alternates: tuple[str, ...] = ()) -> PlaylistItem:
+        names = tuple(dict.fromkeys((name, *alternates)))
         library = self._playlists().items
-        library_matches = [item for item in library if _normalize(item.name) == _normalize(name)]
+        wanted = {_normalize(query) for query in names}
+        library_matches = [item for item in library if _normalize(item.name) in wanted]
         if len(library_matches) > 1:
             raise MusicControlError("ambiguous", "multiple library playlists matched")
         if library_matches:
             return library_matches[0]
-        return _unique_match(
-            self._backend.search_playlists(name), name, lambda item: item.name,
+        candidates = _merge_named_results(
+            self._backend.search_playlists(query) for query in names
         )
+        matches = [item for item in candidates if _normalize(item.name) in wanted]
+        if len(matches) != 1:
+            code = "not_found" if not matches else "ambiguous"
+            raise MusicControlError(code, "playlist could not be resolved uniquely")
+        return matches[0]
 
-    def _resolve_artist(self, query: str) -> str:
-        candidates = self._backend.search_artists(query)
-        exact = [item for item in candidates if _normalize(item.artist) == _normalize(query)]
+    def _resolve_artist(self, query: str, alternates: tuple[str, ...] = ()) -> str:
+        queries = tuple(dict.fromkeys((query, *alternates)))
+        candidates = _merge_named_results(
+            self._backend.search_artists(item) for item in queries
+        )
+        wanted = {_normalize(item) for item in queries}
+        exact = [item for item in candidates if _normalize(item.artist) in wanted]
         if len(exact) == 1:
             return exact[0].artist
         if len(exact) > 1:
             raise MusicControlError("ambiguous", "artist could not be resolved uniquely")
-        songs = sorted(self._backend.search_songs(query), key=lambda item: item.search_rank)
+        songs = sorted(_merge_search_results(
+            self._backend.search_songs(item) for item in queries
+        ), key=lambda item: item.search_rank)
         leading_artists = {_normalize(item.artist) for item in songs[:5] if item.artist}
         if len(leading_artists) == 1 and songs:
             return songs[0].artist
@@ -254,13 +269,17 @@ def _unique_match(items, query: str, value_getter):
 
 def _unique_music_match(
     items: tuple[MusicItem, ...], title: str, artist: str,
+    alternate_queries: tuple[str, ...] = (),
 ) -> tuple[MusicItem, int]:
     title_key = _normalize(title)
     artist_key = _normalize(artist)
+    query_forms = {_normalize(query) for query in alternate_queries}
     matches = [
         (item, index) for index, item in enumerate(items)
-        if _normalize(item.title) == title_key
-        and (not artist_key or _normalize(item.artist) == artist_key)
+        if (
+            _normalize(item.title) == title_key
+            and (not artist_key or _normalize(item.artist) == artist_key)
+        ) or _normalize(item.artist + " " + item.title) in query_forms
     ]
     if not matches:
         raise MusicControlError("not_found", "no matching song")
@@ -435,6 +454,17 @@ def _merge_search_results(
             if current is None or item.search_rank < current.search_rank:
                 by_id[item.item_id] = item
     return tuple(sorted(by_id.values(), key=lambda item: item.search_rank))
+
+
+def _merge_named_results(result_sets):
+    by_id = {}
+    for results in result_sets:
+        for item in results:
+            key = getattr(item, "item_id", "") or getattr(item, "playlist_id", "")
+            if not key:
+                key = _normalize(getattr(item, "artist", "") or getattr(item, "name", ""))
+            by_id.setdefault(key, item)
+    return tuple(by_id.values())
 
 
 def _similarity(left: str, right: str) -> float:

@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 
 from ..music_control import (
-    MusicAction, MusicActionParser, MusicController, MusicSequenceExecutor,
+    MusicAction, MusicActionParser, MusicController, MusicSemanticInterpreter,
+    MusicSequenceExecutor,
 )
+from ..models import ChatMessage
 from .base import ToolResult
 
 
@@ -12,12 +14,22 @@ class MusicControlTool:
     name = "music_control"
     side_effecting = True
 
-    def __init__(self, parser: MusicActionParser, controller: MusicController) -> None:
+    def __init__(
+        self,
+        parser: MusicActionParser | MusicSemanticInterpreter,
+        controller: MusicController,
+    ) -> None:
         self._parser = parser
         self._executor = MusicSequenceExecutor(controller)
 
     def run(self, user_text: str) -> ToolResult:
-        parsed = self._parser.parse(user_text)
+        return self.run_with_context(user_text, ())
+
+    def run_with_context(
+        self, user_text: str, history: tuple[ChatMessage, ...],
+    ) -> ToolResult:
+        interpret = getattr(self._parser, "interpret", None)
+        parsed = interpret(user_text, history) if interpret else self._parser.parse(user_text)
         if not parsed.ok or parsed.sequence is None:
             return ToolResult(
                 self.name, False, {"reason": parsed.error_code},

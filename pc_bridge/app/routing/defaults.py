@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ..pc_control.registry import AppRegistry
+from ..music_control import MusicSemanticInterpreter
 from .pc_control_rules import (
     detect_conditional_pc_planning,
     excludes_weather_lookup_for_pc_discussion,
@@ -14,11 +15,16 @@ from .music_control_rules import (
     matches_music_control_request,
 )
 from .rule_based import RuleBasedSemanticRouter
+from .music_fallback import MusicFallbackSemanticRouter
+from .base import SemanticRouter
 from .weather_rules import matches_weather_request
 
 
-def create_default_semantic_router(apps: AppRegistry) -> RuleBasedSemanticRouter:
-    return RuleBasedSemanticRouter(
+def create_default_semantic_router(
+    apps: AppRegistry,
+    music_interpreter: MusicSemanticInterpreter | None = None,
+) -> SemanticRouter:
+    router = RuleBasedSemanticRouter(
         {
             "weather": lambda request: (
                 matches_weather_request(request)
@@ -36,3 +42,4 @@ def create_default_semantic_router(apps: AppRegistry) -> RuleBasedSemanticRouter
             detect_conditional_music_planning,
         ),
     )
+    return MusicFallbackSemanticRouter(router, music_interpreter) if music_interpreter else router

@@ -11,6 +11,7 @@ from .controller import (
 )
 from .parser import RuleBasedMusicActionParser
 from .sequence import MusicSequenceExecutor
+from .semantic import MusicSemanticInterpreter, MusicSemanticMetrics
 
 __all__ = [
     "AppleMusicBackend", "AppleMusicPwaController", "CdpAppleMusicBackend",
@@ -18,5 +19,6 @@ __all__ = [
     "MusicActionSequence", "MusicActionSequenceResult", "MusicActionType",
     "MusicControlError", "MusicController", "MusicItem",
     "PersonalMusicItem", "PersonalMusicSnapshot", "PlaylistItem", "PlaylistSnapshot",
-    "RuleBasedMusicActionParser", "MusicSequenceExecutor",
+    "RuleBasedMusicActionParser", "MusicSemanticInterpreter", "MusicSemanticMetrics",
+    "MusicSequenceExecutor",
 ]

@@ -74,7 +74,7 @@ class ConversationManager:
             if route.planning_required:
                 print(f"[route] planning required: {route.planning_reason}")
                 history = history + [ChatMessage("system", _PLANNING_REQUIRED_CONTEXT)]
-            executions = self._executor.execute(route, user_text)
+            executions = self._executor.execute(route, user_text, tuple(history))
             failed_side_effect = False
             successful_side_effect = False
             partial_side_effect = False

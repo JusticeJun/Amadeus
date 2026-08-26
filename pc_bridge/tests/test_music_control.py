@@ -503,6 +503,50 @@ def test_resolver_accepts_future_alternate_queries_without_changing_backend_cont
     assert queries[:2] == ["surface query", "Canonical Title"]
 
 
+def test_playlist_resolver_uses_alternate_names_but_keeps_library_authoritative() -> None:
+    backend = FakeAppleMusicBackend()
+    controller = AppleMusicPwaController(backend)
+
+    result = controller.execute(MusicAction(
+        MusicActionType.PLAY_PLAYLIST,
+        playlist="공부용",
+        alternate_queries=("공부할 때",),
+    ))
+
+    assert result.ok
+    assert result.data["playlist"] == "공부할 때"
+
+
+def test_artist_resolver_uses_alternate_queries_and_verifies_now_playing() -> None:
+    backend = FakeAppleMusicBackend()
+    controller = AppleMusicPwaController(backend)
+
+    result = controller.execute(MusicAction(
+        MusicActionType.PLAY_ARTIST,
+        artist="아이묭",
+        alternate_queries=("aimyon",),
+    ))
+
+    assert result.ok
+    assert result.data["artist"] == "aimyon"
+
+
+def test_playlist_track_resolver_uses_alternate_combined_query() -> None:
+    backend = FakeAppleMusicBackend()
+    controller = AppleMusicPwaController(backend)
+
+    result = controller.execute(MusicAction(
+        MusicActionType.PLAY_PLAYLIST_TRACK,
+        playlist="아이묭 대표곡",
+        title="마리골드",
+        artist="아이묭",
+        alternate_queries=("aimyon Marigold",),
+    ))
+
+    assert result.ok
+    assert result.data["now_playing"]["id"] == "song.marigold"
+
+
 def test_playlist_listing_is_cached_and_preserves_partial_status() -> None:
     backend = FakeAppleMusicBackend()
     backend.playlists = PlaylistSnapshot(
