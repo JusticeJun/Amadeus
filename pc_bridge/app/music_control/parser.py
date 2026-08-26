@@ -7,7 +7,11 @@ from .actions import (
 )
 
 
-_PLAY_COMMAND = r"(?:틀어(?:줘|줄래)?|재생(?:해줘|해줄래|해)?)"
+_PLAY_COMMAND = r"(?:틀어(?:줘|줄래)?|재생(?:해줘|해줄래|해)?|들려(?:줘|줄래)?)"
+_LEADING_CONVERSATIONAL_FILLER = re.compile(
+    r"^(?:(?:안녕(?:하세요)?|야|저기|있잖아|잠깐만)(?:[,.!?~]+|\s+))+",
+    re.IGNORECASE,
+)
 _SEQUENCE_CONNECTOR = re.compile(
     r"\s*(?:그리고|한\s*다음(?:에)?|(?<=일시정지)하고|(?<=재생)하고|"
     r"(?<=해줘)\s*하고|(?<=틀)고|(?<=재생하)고|(?<=일시정지하)고|"
@@ -38,7 +42,7 @@ class RuleBasedMusicActionParser:
             r"(?:알려\s*주고|확인\s*하고|볼륨\s*[^,]+?하고|소리\s*[^,]+?하고)",
             text,
         )[-1].strip()
-        text = re.sub(r"^(?:안녕(?:하세요)?[,.!?~]*\s+)", "", text).strip()
+        text = _LEADING_CONVERSATIONAL_FILLER.sub("", text).strip()
         text = re.sub(r"^크리스(?:야|아)?[,.!?~]*\s+", "", text).strip()
         text = re.sub(r"\s+좀\s+(?=(?:틀어|재생))", " ", text).strip()
         return text.rstrip(" ?!.,~")
@@ -118,6 +122,17 @@ class RuleBasedMusicActionParser:
             title = named_song.group("title").strip()
             return MusicAction(
                 MusicActionType.PLAY_SONG, title=title, source_query=title,
+            )
+
+        arbitrary_artist = re.search(
+            rf"(?P<artist>.+?)\s+(?:노래|곡|음악)(?:\s+아무거나(?:\s*한\s*곡)?)?\s*"
+            rf"{_PLAY_COMMAND}$",
+            text,
+        )
+        if arbitrary_artist:
+            return MusicAction(
+                MusicActionType.PLAY_ARTIST,
+                artist=arbitrary_artist.group("artist").strip(),
             )
 
         song = re.search(

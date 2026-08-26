@@ -42,17 +42,16 @@ These examples describe grammar only; never copy placeholder values into output.
 
 _ACTION_SCHEMA = {"type": "object", "properties": {
     "type": {"type": "string", "enum": [item.value for item in MusicActionType]},
-    "title": {"type": "string", "maxLength": 200},
-    "artist": {"type": "string", "maxLength": 200},
-    "playlist": {"type": "string", "maxLength": 200},
-    "alternate_queries": {"type": "array", "maxItems": _MAX_ALTERNATES,
-                          "items": {"type": "string", "minLength": 1, "maxLength": 240}},
+    "title": {"type": "string"},
+    "artist": {"type": "string"},
+    "playlist": {"type": "string"},
+    "alternate_queries": {"type": "array", "items": {"type": "string"}},
     "artist_explicit": {"type": "boolean"},
 }, "required": ["type", "title", "artist", "playlist", "alternate_queries",
                  "artist_explicit"], "additionalProperties": False}
 MUSIC_SEMANTIC_SCHEMA = {"type": "object", "properties": {
     "status": {"type": "string", "enum": ["parsed", "ambiguous", "unsupported", "not_music"]},
-    "actions": {"type": "array", "maxItems": _MAX_ACTIONS, "items": _ACTION_SCHEMA},
+    "actions": {"type": "array", "items": _ACTION_SCHEMA},
 }, "required": ["status", "actions"], "additionalProperties": False}
 
 
@@ -70,6 +69,7 @@ class MusicSemanticMetrics:
     errors: int = 0
     provider: str = ""
     model: str = ""
+    last_error: str = ""
 
 
 class MusicSemanticInterpreter:
@@ -106,6 +106,7 @@ class MusicSemanticInterpreter:
         if self._client is None:
             return self._remember(key, _safe_rule_fallback(text, rule, "provider_unavailable"))
         self.metrics.llm_fallbacks += 1
+        self.metrics.last_error = ""
         try:
             response = self._client.complete(SemanticLlmRequest(
                 task="music_interpretation", system_prompt=_SYSTEM_PROMPT,
@@ -129,6 +130,7 @@ class MusicSemanticInterpreter:
                 self.metrics.rate_limits += 1
             else:
                 self.metrics.errors += 1
+            self.metrics.last_error = str(exc)
             result = _safe_rule_fallback(text, rule, exc.code)
         return self._remember(key, result)
 

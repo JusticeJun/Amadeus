@@ -186,6 +186,17 @@ def test_default_router_routes_representative_song_request_forms(text) -> None:
     assert decision.required_capabilities == {"music_control"}
 
 
+@pytest.mark.parametrize("text", [
+    "아이묭 마리골드 틀어",
+    "백넘버 노래 들려",
+    "재즈 음악 재생해",
+])
+def test_default_router_routes_music_imperatives(text) -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(text))
+
+    assert decision.required_capabilities == {"music_control"}
+
+
 def test_default_router_routes_implicit_current_heat_regression() -> None:
     decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(
         "오늘도 밖에 많이 덥나? 요즘 개덥던데 진짜로",

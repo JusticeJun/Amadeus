@@ -19,7 +19,7 @@ class MusicFallbackSemanticRouter:
         ):
             return decision
         result = self._interpreter.interpret(request.text, request.history)
-        if not result.ok and result.error_code not in {"ambiguous", "unsupported"}:
+        if result.error_code == "not_music":
             return decision
         matches = decision.matches + (CapabilityMatch("music_control"),)
         capabilities = frozenset(match.capability for match in matches)

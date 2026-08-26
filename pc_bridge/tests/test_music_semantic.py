@@ -140,6 +140,26 @@ def test_provider_failure_can_use_simple_single_action_rule() -> None:
     assert interpreter.metrics.rate_limits == 1
 
 
+def test_provider_failure_candidate_is_routed_to_safe_tool_failure() -> None:
+    client = FakeSemanticClient(error=SemanticLlmError("provider_error", "HTTP 400"))
+    interpreter = MusicSemanticInterpreter(RuleBasedMusicActionParser(), client)
+    router = create_default_semantic_router(default_app_registry(), interpreter)
+
+    class MustNotExecuteController:
+        def execute(self, action):
+            raise AssertionError("failed interpretation must not execute")
+
+    decision = router.route(RoutingRequest("아이묭 마리골드 틀어"))
+    result = MusicControlTool(interpreter, MustNotExecuteController()).run(
+        "아이묭 마리골드 틀어",
+    )
+
+    assert decision.required_capabilities == {"music_control"}
+    assert not result.ok
+    assert result.data["reason"] == "semantic_provider_error"
+    assert "HTTP 400" in result.error
+
+
 def test_schema_failure_never_reaches_music_controller() -> None:
     client = FakeSemanticClient({"status": "parsed", "actions": [action_data(
         title="수평선", alternate_queries=["same", "same"],

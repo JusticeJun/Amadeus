@@ -8,14 +8,15 @@ from .base import RoutingRequest
 _WEATHER_CONDITION = re.compile(
     r"(?:비|눈|날씨|기온|온도|밖|바깥).{0,30}(?:면|하면|으면|일때|인경우|넘으면)",
 )
+_MUSIC_IMPERATIVE = re.compile(
+    r"(?:틀어(?:줘|줄래)?|재생(?:해줘|해줄래|해)?|들려(?:줘|줄래)?|"
+    r"일시정지(?:좀)?(?:해줘)?|멈춰|넘겨(?:줘)?|돌아가(?:줘)?)[?!.,~]*$",
+)
 
 
 def matches_music_control_request(request: RoutingRequest) -> bool:
     text = "".join(request.text.lower().split())
-    play_request = any(word in text for word in (
-        "틀어줘", "틀어줄래", "재생해줘", "재생해줄래", "일시정지해줘", "잠깐멈춰",
-        "일시정지좀해줘", "재생멈춰", "넘겨줘", "돌아가줘",
-    ))
+    play_request = bool(_MUSIC_IMPERATIVE.search(text))
     query = any(word in text for word in (
         "내플레이리스트뭐있", "플레이리스트목록", "지금무슨곡",
         "지금무슨노래", "지금뭐재생", "현재재생곡",

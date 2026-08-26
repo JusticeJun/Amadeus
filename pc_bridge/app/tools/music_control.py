@@ -31,9 +31,11 @@ class MusicControlTool:
         interpret = getattr(self._parser, "interpret", None)
         parsed = interpret(user_text, history) if interpret else self._parser.parse(user_text)
         if not parsed.ok or parsed.sequence is None:
+            detail = getattr(getattr(self._parser, "metrics", None), "last_error", "")
             return ToolResult(
                 self.name, False, {"reason": parsed.error_code},
-                f"music action parsing failed: {parsed.error_code}",
+                f"music action parsing failed: {parsed.error_code}"
+                + (f" ({detail})" if detail else ""),
             )
         sequence_result = self._executor.execute(parsed.sequence)
         action_data = [

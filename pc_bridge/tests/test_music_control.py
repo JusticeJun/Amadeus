@@ -144,6 +144,12 @@ class FakeWebSocket:
     ("수평선이라는 노래 틀어줘", MusicAction(
         MusicActionType.PLAY_SONG, title="수평선",
     )),
+    ("야 백넘버 노래 아무거나 틀어줘", MusicAction(
+        MusicActionType.PLAY_ARTIST, artist="백넘버",
+    )),
+    ("저기 The Beatles 곡 아무거나 재생해줘", MusicAction(
+        MusicActionType.PLAY_ARTIST, artist="The Beatles",
+    )),
 ])
 def test_parser_extracts_representative_music_actions(text, expected) -> None:
     assert RuleBasedMusicActionParser().parse(text).action == expected

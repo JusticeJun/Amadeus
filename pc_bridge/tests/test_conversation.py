@@ -3,9 +3,12 @@ from pathlib import Path
 from app.conversation import ConversationManager
 from app.llm import LlmClient
 from app.models import LlmResult
-from app.routing import RuleBasedSemanticRouter
+from app.music_control import MusicSemanticInterpreter, RuleBasedMusicActionParser
+from app.pc_control import default_app_registry
+from app.routing import RuleBasedSemanticRouter, create_default_semantic_router
+from app.semantic_llm import SemanticLlmError
 from app.tts import TtsEngine
-from app.tools import ToolExecutor
+from app.tools import MusicControlTool, ToolExecutor
 from app.tools.base import ToolResult
 
 
@@ -284,6 +287,44 @@ def test_unrouted_side_effect_cannot_be_reported_as_success() -> None:
     assert len(llm.histories) == 2
     assert any(
         "검증된 실제 조작 성공 결과가 없다" in item.content
+        for item in llm.histories[-1]
+    )
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
+def test_music_semantic_failure_cannot_imply_an_unverified_followup() -> None:
+    class FailedSemanticClient:
+        def complete(self, request):
+            raise SemanticLlmError("provider_error", "Groq HTTP 400")
+
+    class MustNotExecuteController:
+        def execute(self, action):
+            raise AssertionError("failed interpretation must not execute")
+
+    llm = RepeatingLlm("음, 그럼 다른 곡으로 바꿔볼까?")
+    tts = CapturingTts()
+    interpreter = MusicSemanticInterpreter(
+        RuleBasedMusicActionParser(), FailedSemanticClient(),
+    )
+    manager = ConversationManager(
+        SequenceInput(["아이묭 마리골드 틀어", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=create_default_semantic_router(
+            default_app_registry(), interpreter,
+        ),
+        tool_executor=ToolExecutor([
+            MusicControlTool(interpreter, MustNotExecuteController()),
+        ]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert any(
+        "실제 조작은 실패했고 변경된 것은 없다" in item.content
         for item in llm.histories[-1]
     )
     assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."

@@ -106,6 +106,69 @@ def test_groq_semantic_adapter_classifies_rate_limit() -> None:
     assert error.value.code == "rate_limit"
 
 
+def test_groq_semantic_adapter_reports_safe_http_error_details() -> None:
+    headers = Message()
+    headers["x-request-id"] = "request-400"
+
+    def opener(http_request, timeout):
+        raise urllib.error.HTTPError(
+            http_request.full_url,
+            400,
+            "bad request",
+            headers,
+            BytesIO(json.dumps({"error": {
+                "type": "invalid_request_error",
+                "code": "json_schema_invalid",
+                "message": "secret prompt and bearer credential",
+            }}).encode()),
+        )
+
+    with pytest.raises(SemanticLlmError) as error:
+        GroqSemanticLlmClient(settings(), opener=opener).complete(request())
+
+    detail = str(error.value)
+    assert error.value.code == "provider_error"
+    assert "HTTP 400" in detail
+    assert "request_id=request-400" in detail
+    assert "type=invalid_request_error" in detail
+    assert "code=json_schema_invalid" in detail
+    assert "secret prompt" not in detail
+    assert "credential" not in detail
+
+
+def test_groq_semantic_adapter_retries_schema_generation_failure() -> None:
+    calls = 0
+
+    def opener(http_request, timeout):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise urllib.error.HTTPError(
+                http_request.full_url,
+                400,
+                "bad request",
+                Message(),
+                BytesIO(json.dumps({"error": {
+                    "type": "invalid_request_error",
+                    "code": "json_validate_failed",
+                }}).encode()),
+            )
+        return FakeResponse({
+            "choices": [{"message": {
+                "content": '{"status":"ambiguous","actions":[]}',
+            }}],
+        })
+
+    delays = []
+    result = GroqSemanticLlmClient(
+        settings(retries=1), opener=opener, sleeper=delays.append,
+    ).complete(request())
+
+    assert result.data == {"status": "ambiguous", "actions": []}
+    assert calls == 2
+    assert delays == [0.5]
+
+
 def test_groq_semantic_adapter_rejects_malformed_json() -> None:
     def opener(http_request, timeout):
         return FakeResponse({"choices": [{"message": {"content": "not json"}}]})

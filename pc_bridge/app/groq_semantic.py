@@ -82,12 +82,14 @@ class GroqSemanticLlmClient(SemanticLlmClient):
                 code = "rate_limit" if exc.code == 429 else (
                     "provider_unavailable" if exc.code >= 500 else "provider_error"
                 )
-                if attempt < self._settings.groq_max_retries and code in {
-                    "rate_limit", "provider_unavailable",
-                }:
+                detail, provider_code = _safe_http_error_details(exc)
+                retryable = code in {"rate_limit", "provider_unavailable"} or (
+                    provider_code == "json_validate_failed"
+                )
+                if attempt < self._settings.groq_max_retries and retryable:
                     self._sleep(min(0.5 * (2 ** attempt), 2.0))
                     continue
-                raise SemanticLlmError(code, f"Groq HTTP error {exc.code}") from exc
+                raise SemanticLlmError(code, detail) from exc
             except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
                 if attempt < self._settings.groq_max_retries:
                     self._sleep(min(0.5 * (2 ** attempt), 2.0))
@@ -99,3 +101,31 @@ class GroqSemanticLlmClient(SemanticLlmClient):
             except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
                 raise SemanticLlmError("malformed_response", "invalid structured response") from exc
         raise SemanticLlmError("provider_unavailable", "semantic request failed")
+
+
+def _safe_http_error_details(exc: urllib.error.HTTPError) -> tuple[str, str]:
+    details = [f"Groq HTTP {exc.code}"]
+    request_id = _safe_identifier(exc.headers.get("x-request-id", ""))
+    if request_id:
+        details.append(f"request_id={request_id}")
+    try:
+        payload = json.loads(exc.read().decode("utf-8"))
+        error = payload.get("error") if isinstance(payload, dict) else None
+    except (AttributeError, UnicodeDecodeError, json.JSONDecodeError):
+        error = None
+    provider_code = ""
+    if isinstance(error, dict):
+        for field in ("type", "code"):
+            value = _safe_identifier(error.get(field))
+            if value:
+                details.append(f"{field}={value}")
+                if field == "code":
+                    provider_code = value
+    return " ".join(details), provider_code
+
+
+def _safe_identifier(value: object) -> str:
+    text = str(value or "")
+    return text if text and len(text) <= 100 and all(
+        character.isalnum() or character in "._-" for character in text
+    ) else ""
