@@ -1,0 +1,27 @@
+{"id":"music_song_001","text":"마리골드 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["play_song"]}
+{"id":"music_song_002","text":"아이묭 마리골드 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["play_song","artist_hint"]}
+{"id":"music_artist_001","text":"아이묭 노래 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["play_artist"]}
+{"id":"music_playlist_001","text":"아이묭 대표곡 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["play_playlist"]}
+{"id":"music_playlist_002","text":"내 플레이리스트 공부할 때 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["library_playlist"]}
+{"id":"music_playlist_track_001","text":"아이묭 대표곡에서 마리골드 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["playlist_track"]}
+{"id":"music_list_001","text":"내 플레이리스트 뭐 있어?","expected_tools":["music_control"],"category":"explicit_positive","tags":["list_playlists"]}
+{"id":"music_transport_001","text":"음악 일시정지해줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["pause"]}
+{"id":"music_transport_002","text":"다시 재생해줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["play"]}
+{"id":"music_transport_003","text":"다음 곡 틀어줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["next"]}
+{"id":"music_transport_004","text":"이전 노래로 돌아가줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["previous"]}
+{"id":"music_now_001","text":"지금 무슨 곡이야?","expected_tools":["music_control"],"category":"explicit_positive","tags":["now_playing"]}
+{"id":"music_colloquial_001","text":"한 곡 넘겨줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["next"]}
+{"id":"music_colloquial_002","text":"이거 잠깐 멈춰","expected_tools":["music_control"],"category":"context_required","tags":["transport"],"context":[{"role":"assistant","content":"Apple Music으로 노래를 재생했어."}]}
+{"id":"music_negative_001","text":"아이묭 노래 좋아해?","expected_tools":[],"category":"hard_negative","tags":["artist_discussion"]}
+{"id":"music_negative_002","text":"마리골드 가사가 무슨 뜻이야?","expected_tools":[],"category":"hard_negative","tags":["song_discussion"]}
+{"id":"music_negative_003","text":"플레이리스트는 어떻게 만드는 거야?","expected_tools":[],"category":"hard_negative","tags":["how_to"]}
+{"id":"music_negative_004","text":"다음 곡이 더 좋아.","expected_tools":[],"category":"hard_negative","tags":["transport_discussion"]}
+{"id":"music_negative_005","text":"비 오는 날 음악 듣는 게 좋더라","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"music_minimal_001","text":"마리골드 틀어줘","expected_tools":["music_control"],"category":"minimal_pair","tags":["minimal_pair"]}
+{"id":"music_minimal_002","text":"마리골드 트는 법 알려줘","expected_tools":[],"category":"minimal_pair","tags":["minimal_pair"]}
+{"id":"music_minimal_003","text":"다음 곡 틀어줘","expected_tools":["music_control"],"category":"minimal_pair","tags":["minimal_pair"]}
+{"id":"music_minimal_004","text":"다음 곡은 뭐야?","expected_tools":[],"category":"minimal_pair","tags":["minimal_pair"]}
+{"id":"music_ambiguous_001","text":"그거 틀어줘","expected_tools":null,"category":"ambiguous","tags":["context_required"]}
+{"id":"music_ambiguous_002","text":"아까 거 다시","expected_tools":null,"category":"ambiguous","tags":["context_required"]}
+{"id":"music_unsupported_001","text":"플레이리스트에 마리골드 추가해줘","expected_tools":["music_control"],"category":"unsupported_action","tags":["library_mutation"]}
+{"id":"music_unsupported_002","text":"내 플레이리스트 삭제해줘","expected_tools":["music_control"],"category":"unsupported_action","tags":["library_mutation"]}
