@@ -114,3 +114,13 @@ def test_groq_semantic_adapter_rejects_malformed_json() -> None:
         GroqSemanticLlmClient(settings(), opener=opener).complete(request())
 
     assert error.value.code == "malformed_response"
+
+
+def test_groq_semantic_adapter_requires_provider_credentials() -> None:
+    configured = settings()
+    configured.groq_api_key = ""
+
+    with pytest.raises(SemanticLlmError) as error:
+        GroqSemanticLlmClient(configured)
+
+    assert error.value.code == "provider_unavailable"
