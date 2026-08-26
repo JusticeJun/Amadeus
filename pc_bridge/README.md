@@ -166,6 +166,26 @@ executed until a planner can safely enforce their dependency.
 
 ## Common problems
 
+## Apple Music control
+
+`music_control` uses an isolated Chrome profile and the localhost Chrome
+DevTools Protocol to control the signed-in Apple Music PWA. Configure its CDP
+port, Chrome executable, profile directory, timeout, and playlist cache in
+`pc_bridge/.env`. The profile is private local state and must never be committed.
+
+The supported actions cover exact song, artist, and playlist playback; a track
+inside a playlist; playlist listing; transport controls; and now-playing
+metadata. Candidate names are normalized and matched against IDs and metadata.
+Ambiguous candidates are not played, and playback is verified against
+now-playing metadata before success is reported.
+
+Music transport requests now prefer `music_control` so they target Apple Music.
+The older OS media-key implementation remains in `pc_control` for compatibility,
+but should not be selected simultaneously. Conditional side effects remain
+blocked until dependency-aware planning exists.
+
+## Common problems
+
 - `COM3 access denied`: close PlatformIO Monitor or another serial program.
 - `GROQ_API_KEY가 없습니다`: use mock mode or create `pc_bridge/.env` from the example.
 - No reference WAV: place an authorized source in `voice/source/` and run the conversion tool.
