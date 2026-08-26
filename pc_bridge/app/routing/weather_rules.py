@@ -31,6 +31,9 @@ def matches_weather_request(request: RoutingRequest) -> bool:
         "덥", "더워", "더운", "더우", "춥", "추워", "추울", "추우", "쌀쌀", "따뜻",
         "선선", "습", "후덥", "몇도",
     ))
+    implicit_temperature_question = bool(re.search(
+        r"(?:덥|춥|더우|추우|쌀쌀|따뜻|습하|후덥)(?:나|냐|ㄴ가|은가|려나)", text,
+    ))
     precipitation_expression = bool(re.search(
         r"(?:비|눈)(?:가|는|이)?(?:와|오|올|내리|예보|확률)", text
     ))
@@ -47,7 +50,7 @@ def matches_weather_request(request: RoutingRequest) -> bool:
             and not (conceptual_context and not (time_context or outdoor_context)):
         return True
     if (time_context or outdoor_context) and temperature_expression \
-            and (request_intent or observation_intent):
+            and (request_intent or observation_intent or implicit_temperature_question):
         return True
     if precipitation_expression and (time_context or outdoor_context or precipitation_request):
         return True
