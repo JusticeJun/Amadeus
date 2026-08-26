@@ -184,6 +184,15 @@ The older OS media-key implementation remains in `pc_control` for compatibility,
 but should not be selected simultaneously. Conditional side effects remain
 blocked until dependency-aware planning exists.
 
+Set `MUSIC_SEMANTIC_LLM_ENABLED=false` to disable the provider-backed Music
+semantic fallback. The deterministic rule path remains available for safe
+transport/status commands and narrowly validated direct fallbacks. Semantic LLM
+output is schema-validated and then passed through the existing Apple Music
+resolver and metadata validator; it never selects IDs or establishes execution
+success. `MUSIC_SEMANTIC_MODEL` and `MUSIC_SEMANTIC_REASONING_EFFORT` can be
+tuned independently from the Character response model without coupling the
+Music interpreter to a provider.
+
 ## Common problems
 
 - `COM3 access denied`: close PlatformIO Monitor or another serial program.
