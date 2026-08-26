@@ -78,6 +78,22 @@ def test_groq_semantic_adapter_sends_task_schema_and_reports_usage() -> None:
     assert (result.metrics.input_tokens, result.metrics.output_tokens) == (30, 8)
 
 
+def test_groq_semantic_adapter_falls_back_to_character_provider_model() -> None:
+    configured = settings()
+    configured.music_semantic_model = ""
+    captured = {}
+
+    def opener(http_request, timeout):
+        captured["body"] = json.loads(http_request.data)
+        return FakeResponse({
+            "choices": [{"message": {"content": '{"status":"not_music","actions":[]}'}}],
+        })
+
+    GroqSemanticLlmClient(configured, opener=opener).complete(request())
+
+    assert captured["body"]["model"] == configured.groq_model
+
+
 def test_groq_semantic_adapter_classifies_rate_limit() -> None:
     def opener(http_request, timeout):
         raise urllib.error.HTTPError(
