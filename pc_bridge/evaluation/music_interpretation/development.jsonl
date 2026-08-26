@@ -1,0 +1,16 @@
+{"id":"dev_transport_001","text":"일시정지해줘","category":"simple_transport","expected":{"status":"parsed","actions":[{"type":"pause"}]}}
+{"id":"dev_transport_002","text":"다음 곡","category":"simple_transport","expected":{"status":"parsed","actions":[{"type":"next"}]}}
+{"id":"dev_song_001","text":"마리골드 틀어줘","category":"song_request","expected":{"status":"parsed","actions":[{"type":"play_song","title":"마리골드"}]}}
+{"id":"dev_artist_song_001","text":"아이묭의 마리골드 틀어줘","category":"artist_qualified_song","expected":{"status":"parsed","actions":[{"type":"play_song","title":"마리골드","artist":"아이묭"}]}}
+{"id":"dev_artist_001","text":"아이묭 노래 틀어줘","category":"artist_playback","expected":{"status":"parsed","actions":[{"type":"play_artist","artist":"아이묭"}]}}
+{"id":"dev_playlist_001","text":"내 공부 플레이리스트 틀어줘","category":"playlist_playback","expected":{"status":"parsed","actions":[{"type":"play_playlist","playlist":"공부"}]}}
+{"id":"dev_playlist_track_001","text":"굿나잇에서 마리골드 틀어줘","category":"playlist_track_playback","expected":{"status":"parsed","actions":[{"type":"play_playlist_track","playlist":"굿나잇","title":"마리골드"}]}}
+{"id":"dev_sequence_001","text":"다음 곡으로 넘기고 일시정지해줘","category":"same_tool_multi_action_sequence","expected":{"status":"parsed","actions":[{"type":"next"},{"type":"pause"}]}}
+{"id":"dev_wrapper_001","text":"안녕 크리스, 마리골드 틀어줘","category":"conversational_wrapper","expected":{"status":"parsed","actions":[{"type":"play_song","title":"마리골드"}]}}
+{"id":"dev_script_001","text":"YOASOBI アイドル 틀어줘","category":"multilingual_input","expected":{"status":"parsed","actions":[{"type":"play_song","title":"アイドル","artist":"YOASOBI"}]}}
+{"id":"dev_context_001","text":"잠깐 멈춰","category":"context_dependent","context":[{"role":"assistant","content":"Apple Music으로 노래를 재생했어."}],"expected":{"status":"parsed","actions":[{"type":"pause"}]}}
+{"id":"dev_ambiguous_001","text":"그거 틀어줘","category":"ambiguous_request","expected":{"status":"ambiguous","actions":[]}}
+{"id":"dev_negative_001","text":"마리골드 꽃말이 뭐야?","category":"hard_negative","expected":{"status":"rejected","actions":[]}}
+{"id":"dev_unsupported_001","text":"플레이리스트에 마리골드 추가해줘","category":"unsupported_request","expected":{"status":"unsupported","actions":[]}}
+{"id":"dev_malformed_001","text":"틀어줘 플레이리스트에서","category":"malformed_request","expected":{"status":"unsupported","actions":[]}}
+{"id":"dev_wrapper_002","text":"크리스야 부탁 하나만 아이묭 마리골드 좀 틀어줄래?","category":"conversational_wrapper","tags":["e2e_regression"],"expected":{"status":"parsed","actions":[{"type":"play_song","title":"마리골드","artist":"아이묭"}]}}
