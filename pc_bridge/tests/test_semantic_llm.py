@@ -28,12 +28,12 @@ class FakeResponse:
         return json.dumps(self.payload).encode()
 
 
-def settings(retries=0):
+def settings(retries=0, max_completion_tokens=256):
     return SimpleNamespace(
         groq_api_key="secret",
         groq_api_url="https://api.groq.test/chat/completions",
         groq_model="semantic-model",
-        groq_max_completion_tokens=256,
+        groq_max_completion_tokens=max_completion_tokens,
         groq_reasoning_effort="low",
         music_semantic_model="semantic-model",
         music_semantic_reasoning_effort="medium",
@@ -69,6 +69,7 @@ def test_groq_semantic_adapter_sends_task_schema_and_reports_usage() -> None:
     assert result.data["status"] == "ambiguous"
     assert captured["body"]["response_format"]["json_schema"]["strict"] is True
     assert captured["body"]["reasoning_effort"] == "medium"
+    assert captured["body"]["max_completion_tokens"] == 1024
     assert json.loads(captured["body"]["messages"][-1]["content"])["utterance"] == (
         "수평선 틀어줘"
     )
@@ -76,6 +77,22 @@ def test_groq_semantic_adapter_sends_task_schema_and_reports_usage() -> None:
     assert result.metrics.provider == "groq"
     assert result.metrics.model == "resolved-model"
     assert (result.metrics.input_tokens, result.metrics.output_tokens) == (30, 8)
+
+
+def test_groq_semantic_adapter_preserves_larger_completion_budget() -> None:
+    captured = {}
+
+    def opener(http_request, timeout):
+        captured["body"] = json.loads(http_request.data)
+        return FakeResponse({
+            "choices": [{"message": {"content": '{"status":"not_music","actions":[]}'}}],
+        })
+
+    GroqSemanticLlmClient(
+        settings(max_completion_tokens=2048), opener=opener,
+    ).complete(request())
+
+    assert captured["body"]["max_completion_tokens"] == 2048
 
 
 def test_groq_semantic_adapter_falls_back_to_character_provider_model() -> None:
@@ -134,6 +151,60 @@ def test_groq_semantic_adapter_reports_safe_http_error_details() -> None:
     assert "code=json_schema_invalid" in detail
     assert "secret prompt" not in detail
     assert "credential" not in detail
+
+
+def test_groq_semantic_adapter_reports_schema_mismatch_without_generated_values() -> None:
+    failed_generation = json.dumps({
+        "status": "parsed",
+        "actions": [{"type": "play_playlist", "playlist": "private playlist"}],
+    })
+
+    def opener(http_request, timeout):
+        raise urllib.error.HTTPError(
+            http_request.full_url,
+            400,
+            "bad request",
+            Message(),
+            BytesIO(json.dumps({"error": {
+                "type": "invalid_request_error",
+                "code": "json_validate_failed",
+                "failed_generation": failed_generation,
+            }}).encode()),
+        )
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "status": {"type": "string"},
+            "actions": {"type": "array", "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "playlist": {"type": "string"},
+                    "artist_explicit": {"type": "boolean"},
+                },
+                "required": ["type", "playlist", "artist_explicit"],
+                "additionalProperties": False,
+            }},
+        },
+        "required": ["status", "actions"],
+        "additionalProperties": False,
+    }
+    semantic_request = request()
+    semantic_request = SemanticLlmRequest(
+        semantic_request.task,
+        semantic_request.system_prompt,
+        semantic_request.input,
+        semantic_request.schema_name,
+        schema,
+    )
+
+    with pytest.raises(SemanticLlmError) as error:
+        GroqSemanticLlmClient(settings(), opener=opener).complete(semantic_request)
+
+    detail = str(error.value)
+    assert "schema_mismatch=$.actions[0].artist_explicit:required" in detail
+    assert "private playlist" not in detail
 
 
 def test_groq_semantic_adapter_retries_schema_generation_failure() -> None:

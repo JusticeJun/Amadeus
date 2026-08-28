@@ -61,3 +61,20 @@ class ToolExecutor:
                 side_effecting=bool(getattr(tool, "side_effecting", False)),
             ))
         return tuple(executions)
+
+    def continue_clarification(
+        self, capability: str, pending: dict[str, object], user_text: str,
+        history: tuple[ChatMessage, ...] = (),
+    ) -> ToolExecution | None:
+        """Attempt one bounded, capability-owned clarification continuation."""
+        tool = self._tools.get(capability)
+        continuation = getattr(tool, "continue_clarification", None) if tool else None
+        if continuation is None:
+            return None
+        result = continuation(pending, user_text, history)
+        if result is None:
+            return None
+        return ToolExecution(
+            result, tool.build_llm_context(result),
+            side_effecting=bool(getattr(tool, "side_effecting", False)),
+        )

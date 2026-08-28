@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from difflib import SequenceMatcher
+import json
+import os
 import re
+import sys
 import time
 import unicodedata
 from typing import Protocol
@@ -10,9 +12,20 @@ from typing import Protocol
 from .actions import MusicAction, MusicActionResult, MusicActionType
 
 
+_MAX_TRACK_QUERY_VARIANTS = 4
+
+
+def _retrieval_diagnostic(stage: str, **data: object) -> None:
+    if os.environ.get("AMADEUS_MUSIC_DIAGNOSTICS") == "1":
+        print(
+            f"[music_retrieval_diagnostic] {stage}:" + json.dumps(
+                data, ensure_ascii=False, separators=(",", ":"),
+            ),
+            file=sys.stderr,
+        )
+
+
 _MIN_RELEVANCE_RANK_GAP = 4
-_MIN_SONG_SCORE = 80.0
-_MIN_SONG_SCORE_MARGIN = 8.0
 
 
 @dataclass(frozen=True)
@@ -52,6 +65,36 @@ class PersonalMusicSnapshot:
     warning: str = ""
 
 
+@dataclass(frozen=True)
+class SongCandidateJudgment:
+    outcome: str
+    index: int = -1
+    title_equivalent: bool = False
+    artist_equivalent: bool = False
+    rejection_reason: str = ""
+    error_category: str = ""
+
+    @property
+    def approved(self) -> bool:
+        return (
+            self.outcome == "match"
+            and self.index >= 0
+            and self.title_equivalent
+            and not self.rejection_reason
+            and not self.error_category
+        )
+
+
+@dataclass(frozen=True)
+class CatalogQueryVariant:
+    artist: str = ""
+    title: str = ""
+
+    @property
+    def query(self) -> str:
+        return " ".join(filter(None, (self.artist.strip(), self.title.strip())))
+
+
 class AppleMusicBackend(Protocol):
     def selector_health(self) -> dict[str, bool]: ...
     def search_songs(self, query: str) -> tuple[MusicItem, ...]: ...
@@ -62,12 +105,56 @@ class AppleMusicBackend(Protocol):
     def play_song(self, item_id: str) -> MusicItem: ...
     def play_artist(self, item_id: str) -> MusicItem: ...
     def load_playlist(self, playlist_id: str) -> tuple[MusicItem, ...]: ...
+    def playlist_tracks(self, playlist_id: str) -> tuple[MusicItem, ...]: ...
     def play_queue_item(self, index: int) -> MusicItem: ...
     def play(self) -> MusicItem: ...
     def pause(self) -> MusicItem: ...
     def next(self) -> MusicItem: ...
     def previous(self) -> MusicItem: ...
     def now_playing(self) -> MusicItem: ...
+
+
+class MusicCandidateSemantics(Protocol):
+    def judge_song_candidate(
+        self, action: MusicAction, candidates: tuple[MusicItem, ...],
+    ) -> SongCandidateJudgment | None: ...
+    def judge_playlist_candidate(
+        self, surface: str, candidates: tuple[PlaylistItem, ...],
+    ) -> int | None: ...
+    def rewrite_track_queries(
+        self, artist_surface: str, title_surface: str,
+    ) -> tuple[CatalogQueryVariant, ...]: ...
+
+
+class TrackResolver:
+    """Resolve one request against actual catalog/library candidates."""
+
+    def __init__(self, semantics: MusicCandidateSemantics | None = None) -> None:
+        self._semantics = semantics
+
+    def resolve(
+        self, action: MusicAction, candidates: tuple[MusicItem, ...],
+    ) -> MusicItem:
+        deterministic = _deterministic_track_matches(action, candidates)
+        if len(deterministic) == 1:
+            return deterministic[0]
+        if len(deterministic) > 1:
+            raise MusicControlError("ambiguous", "multiple songs matched")
+        if not candidates:
+            raise MusicControlError("no_match", "no song candidates were retrieved")
+        if self._semantics is None:
+            raise MusicControlError("no_match", "no reasonable song candidate")
+        bounded = candidates[:10]
+        judgment = self._semantics.judge_song_candidate(action, bounded)
+        if (
+            judgment is None
+            or not judgment.approved
+            or not judgment.title_equivalent
+            or (action.artist and not judgment.artist_equivalent)
+            or not 0 <= judgment.index < len(bounded)
+        ):
+            raise MusicControlError("no_match", "no reasonable song candidate")
+        return bounded[judgment.index]
 
 
 class AppleMusicPwaController:
@@ -78,12 +165,15 @@ class AppleMusicPwaController:
         playlist_cache_seconds: float = 60.0,
         personal_music_cache_seconds: float = 300.0,
         health_cache_seconds: float = 30.0,
+        candidate_semantics: MusicCandidateSemantics | None = None,
         clock=time.monotonic,
     ) -> None:
         self._backend = backend
         self._cache_seconds = playlist_cache_seconds
         self._health_cache_seconds = health_cache_seconds
         self._personal_cache_seconds = personal_music_cache_seconds
+        self._candidate_semantics = candidate_semantics
+        self._track_resolver = TrackResolver(candidate_semantics)
         self._clock = clock
         self._playlist_cache: tuple[float, PlaylistSnapshot] | None = None
         self._personal_cache: tuple[float, PersonalMusicSnapshot] | None = None
@@ -95,7 +185,11 @@ class AppleMusicPwaController:
             data = self._execute(action)
             return MusicActionResult(action, True, data)
         except MusicControlError as exc:
-            return MusicActionResult(action, False, {"reason": exc.code}, str(exc))
+            return MusicActionResult(action, False, {
+                "reason": exc.code,
+                **({"candidate_options": list(exc.candidate_options)}
+                   if exc.candidate_options else {}),
+            }, str(exc))
         except (OSError, TimeoutError) as exc:
             return MusicActionResult(action, False, {"reason": "backend_unavailable"}, str(exc))
 
@@ -143,21 +237,52 @@ class AppleMusicPwaController:
                 "queue_length": len(queue),
             }
         if kind is MusicActionType.PLAY_SONG:
-            query = action.source_query or " ".join(filter(None, (
-                action.artist, action.title,
-            )))
-            queries = tuple(dict.fromkeys((query, *action.alternate_queries)))
-            candidates = _merge_search_results(
-                self._backend.search_songs(candidate_query)
-                for candidate_query in queries if candidate_query
+            query = action.source_query or " ".join(filter(None, (action.artist, action.title)))
+            _retrieval_diagnostic(
+                "parsed", action=kind.value, artist=action.artist, title=action.title,
+                source_query=action.source_query,
             )
-            title_candidates = (
-                self._backend.search_songs(action.title) if action.artist else ()
-            )
+            _retrieval_diagnostic("search", query=query, backend="apple_music_catalog")
+            native_results = self._backend.search_songs(query)
+            rewritten_results: tuple[tuple[MusicItem, ...], ...] = ()
+            rewrite_variants: tuple[CatalogQueryVariant, ...] = ()
+            if not native_results and self._candidate_semantics is not None:
+                rewrite_variants = self._candidate_semantics.rewrite_track_queries(
+                    action.artist, action.title,
+                )[:_MAX_TRACK_QUERY_VARIANTS]
+                _retrieval_diagnostic(
+                    "query_rewrite", invoked="yes", reason="initial_catalog_empty",
+                    variants=[{
+                        "artist": variant.artist, "title": variant.title,
+                    } for variant in rewrite_variants],
+                )
+                rewritten_results = tuple(
+                    self._backend.search_songs(variant.query)
+                    for variant in rewrite_variants if variant.query
+                )
+            else:
+                _retrieval_diagnostic(
+                    "query_rewrite", invoked="no",
+                    reason=(
+                        "initial_catalog_results_present"
+                        if native_results else "rewriter_unavailable"
+                    ),
+                )
+            catalog_candidates = _merge_search_results((
+                native_results, *rewritten_results,
+            ))
             personal = self._personal_music()
-            expected = _resolve_song_candidate(
-                candidates, title_candidates, action, personal.items,
+            candidates = _merge_search_results((
+                catalog_candidates, tuple(entry.item for entry in personal.items),
+            ))
+            _retrieval_diagnostic(
+                "candidate_pool", native_catalog_count=len(native_results),
+                rewritten_catalog_count=sum(map(len, rewritten_results)),
+                personal_index_count=len(personal.items),
+                merged_candidate_count=len(candidates),
+                rejection_reason=("no_actual_candidates" if not candidates else ""),
             )
+            expected = self._track_resolver.resolve(action, candidates)
             return _verified_data(self._backend.play_song(expected.item_id), expected)
         if kind is MusicActionType.PLAY_ARTIST:
             artist = self._resolve_artist(action.artist, action.alternate_queries)
@@ -217,14 +342,44 @@ class AppleMusicPwaController:
             raise MusicControlError("ambiguous", "multiple library playlists matched")
         if library_matches:
             return library_matches[0]
-        candidates = _merge_named_results(
-            self._backend.search_playlists(query) for query in names
+        membership_matches = self._playlist_membership_matches(library, names)
+        if len(membership_matches) == 1:
+            return membership_matches[0]
+        if len(membership_matches) > 1:
+            raise MusicControlError(
+                "ambiguous", "multiple personal playlists matched",
+                candidate_options=tuple(item.name for item in membership_matches),
+            )
+        raise MusicControlError("not_found", "personal playlist could not be resolved")
+
+    def _playlist_membership_matches(
+        self, library: tuple[PlaylistItem, ...], names: tuple[str, ...],
+    ) -> list[PlaylistItem]:
+        variants = tuple(dict.fromkeys(
+            variant for name in names for variant in _entity_query_variants(name)
+        ))
+        search = _merge_search_results(
+            self._backend.search_songs(query) for query in variants
         )
-        matches = [item for item in candidates if _normalize(item.name) in wanted]
-        if len(matches) != 1:
-            code = "not_found" if not matches else "ambiguous"
-            raise MusicControlError(code, "playlist could not be resolved uniquely")
-        return matches[0]
+        leading_artists = [_normalize(item.artist) for item in search[:5] if item.artist]
+        if not leading_artists:
+            return []
+        artist = max(set(leading_artists), key=leading_artists.count)
+        if leading_artists.count(artist) < min(4, len(leading_artists)):
+            return []
+        matches = []
+        read_tracks = getattr(self._backend, "playlist_tracks", None)
+        if read_tracks is None:
+            return []
+        for playlist in library:
+            try:
+                tracks = read_tracks(playlist.playlist_id)
+            except (MusicControlError, OSError, TimeoutError):
+                continue
+            same_artist = sum(_normalize(track.artist) == artist for track in tracks)
+            if same_artist >= 2 and same_artist / len(tracks) >= 0.6:
+                matches.append(playlist)
+        return matches
 
     def _resolve_artist(self, query: str, alternates: tuple[str, ...] = ()) -> str:
         queries = tuple(dict.fromkeys((query, *alternates)))
@@ -247,9 +402,12 @@ class AppleMusicPwaController:
 
 
 class MusicControlError(RuntimeError):
-    def __init__(self, code: str, message: str) -> None:
+    def __init__(
+        self, code: str, message: str, *, candidate_options: tuple[str, ...] = (),
+    ) -> None:
         super().__init__(message)
         self.code = code
+        self.candidate_options = candidate_options
 
 
 def _normalize(value: str) -> str:
@@ -306,142 +464,29 @@ def _unique_music_match(
     raise MusicControlError("ambiguous", "multiple songs matched")
 
 
-def _resolve_song_candidate(
-    candidates: tuple[MusicItem, ...],
-    title_candidates: tuple[MusicItem, ...],
-    action: MusicAction,
-    personal_items: tuple[PersonalMusicItem, ...] = (),
-) -> MusicItem:
-    personal_by_id = {entry.item.item_id: entry for entry in personal_items}
-    candidate_ids = {item.item_id for item in candidates}
-    personal_candidates = tuple(
-        entry.item for entry in personal_items if entry.item.item_id not in candidate_ids
-    )
-    ranked = sorted(candidates + personal_candidates, key=lambda item: item.search_rank)
-    if not ranked:
-        raise MusicControlError("no_match", "no reasonable song candidate")
+def _deterministic_track_matches(
+    action: MusicAction, candidates: tuple[MusicItem, ...],
+) -> tuple[MusicItem, ...]:
+    """Return canonical recordings supported by explicit lexical evidence."""
+    requested_title = _normalize(action.title)
+    requested_artist = _normalize(action.artist)
     groups: dict[tuple[str, str], MusicItem] = {}
-    for item in ranked:
+    for item in candidates:
+        if not requested_title or _normalize(item.title) != requested_title:
+            continue
+        if requested_artist and _normalize(item.artist) != requested_artist:
+            continue
         recording_key = _normalize(item.recording_id) or f"catalog:{item.item_id}"
         key = (_normalize(item.artist), recording_key)
         current = groups.get(key)
         if current is None or item.search_rank < current.search_rank:
             groups[key] = item
+    return tuple(sorted(groups.values(), key=lambda item: item.search_rank))
 
-    requested_title = _normalize(action.title)
-    requested_artist = _normalize(action.artist)
-    source_query = _normalize(action.source_query or " ".join(filter(None, (
-        action.artist, action.title,
-    ))))
-    query_forms = tuple(filter(None, (
-        source_query, *(_normalize(query) for query in action.alternate_queries),
-    )))
-    leader = ranked[0]
-    exact_requested = [
-        item for item in ranked if _normalize(item.title) == requested_title
-    ]
-    ranked_alias = (
-        leader.search_rank == 0
-        and _is_self_titled_release(leader)
-        and _normalize(leader.title) != requested_title
-        and (not exact_requested or exact_requested[0].search_rank >= 2)
-    )
-    title_leader_id = (
-        min(title_candidates, key=lambda item: item.search_rank).item_id
-        if title_candidates else ""
-    )
-    top_artists = [_normalize(item.artist) for item in ranked[:5] if item.artist]
-    dominant_leader_artist = bool(top_artists) and (
-        len(set(top_artists)) == 1
-        or top_artists.count(_normalize(leader.artist)) >= 4
-    )
 
-    scored: list[tuple[float, MusicItem]] = []
-    for item in groups.values():
-        title = _normalize(item.title)
-        artist = _normalize(item.artist)
-        combined = {artist + title, title + artist}
-        title_exact = bool(requested_title) and title == requested_title
-        combined_exact = any(query in combined for query in query_forms)
-        full_title_exact = any(title == query for query in query_forms)
-        artist_exact = bool(requested_artist) and artist == requested_artist
-        artist_in_query = bool(artist) and any(artist in query for query in query_forms)
-        title_in_query = bool(title) and any(title in query for query in query_forms)
-        alias_corroborated = (
-            item.item_id == leader.item_id
-            and item.item_id == title_leader_id
-            and dominant_leader_artist
-        )
-        cross_script_leader = (
-            item.item_id == leader.item_id
-            and item.search_rank == 0
-            and _is_self_titled_release(item)
-            and dominant_leader_artist
-            and (artist_exact or alias_corroborated)
-        )
-        rank_alias_leader = item.item_id == leader.item_id and ranked_alias
-
-        similarity = max(
-            *(_similarity(title, query) for query in query_forms),
-            _similarity(title, requested_title),
-        )
-        if combined_exact:
-            title_score = 105.0
-        elif full_title_exact:
-            title_score = 100.0
-        elif title_exact:
-            title_score = 90.0
-        elif title_in_query and artist_in_query:
-            title_score = 95.0
-        elif similarity >= 0.92:
-            title_score = 75.0
-        elif similarity >= 0.82:
-            title_score = 55.0
-        elif rank_alias_leader:
-            title_score = 105.0
-        elif cross_script_leader:
-            title_score = 65.0
-        elif alias_corroborated:
-            title_score = 75.0
-        else:
-            continue
-
-        artist_hint_conflicts = (
-            bool(requested_artist)
-            and not artist_exact
-            and not alias_corroborated
-            and not full_title_exact
-        )
-        if artist_hint_conflicts:
-            continue
-        if action.artist_explicit and requested_artist and not (
-            artist_exact or alias_corroborated
-        ):
-            continue
-
-        artist_score = 30.0 if artist_exact else (20.0 if artist_in_query else 0.0)
-        rank_score = max(0.0, 20.0 - 3.0 * item.search_rank)
-        release_score = 5.0 if _is_self_titled_release(item) else 0.0
-        personal = personal_by_id.get(item.item_id)
-        personal_score = 0.0
-        if personal:
-            personal_score += 25.0 if personal.in_library else 0.0
-            if personal.playlist_count:
-                personal_score += min(30.0, 15.0 + 5.0 * personal.playlist_count)
-        scored.append((
-            title_score + artist_score + rank_score + release_score + personal_score,
-            item,
-        ))
-
-    if not scored:
-        raise MusicControlError("no_match", "no reasonable song candidate")
-    scored.sort(key=lambda pair: (-pair[0], pair[1].search_rank))
-    best_score, best = scored[0]
-    if best_score < _MIN_SONG_SCORE:
-        raise MusicControlError("no_match", "no reasonable song candidate")
-    if len(scored) > 1 and best_score - scored[1][0] <= _MIN_SONG_SCORE_MARGIN:
-        raise MusicControlError("ambiguous", "multiple songs matched")
-    return best
+def _entity_query_variants(value: str) -> tuple[str, ...]:
+    value = value.strip()
+    return (value,) if value else ()
 
 
 def _merge_search_results(
@@ -465,17 +510,6 @@ def _merge_named_results(result_sets):
                 key = _normalize(getattr(item, "artist", "") or getattr(item, "name", ""))
             by_id.setdefault(key, item)
     return tuple(by_id.values())
-
-
-def _similarity(left: str, right: str) -> float:
-    if not left or not right:
-        return 0.0
-    return SequenceMatcher(None, left, right).ratio()
-
-
-def _is_self_titled_release(item: MusicItem) -> bool:
-    title = _normalize(item.title)
-    return bool(title) and _normalize(item.album).startswith(title)
 
 
 def _verified_data(actual: MusicItem, expected: MusicItem) -> dict[str, object]:

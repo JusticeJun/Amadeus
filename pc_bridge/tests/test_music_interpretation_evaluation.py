@@ -70,14 +70,14 @@ def test_rule_music_interpretation_holdout_baseline_is_preserved() -> None:
         _rule_prediction,
     )
 
-    assert (report.action.correct, report.action.total) == (29, 51)
-    assert (report.entity.correct, report.entity.total) == (34, 66)
+    assert (report.action.correct, report.action.total) == (34, 51)
+    assert (report.entity.correct, report.entity.total) == (35, 65)
     assert (
         report.full_structured_request.correct,
         report.full_structured_request.total,
-    ) == (23, 55)
+    ) == (26, 55)
     assert (report.action_sequence_exact.correct, report.action_sequence_exact.total) == (
-        31, 55,
+        36, 55,
     )
     assert (report.ambiguity_handling.correct, report.ambiguity_handling.total) == (0, 3)
     assert (report.context_dependent.correct, report.context_dependent.total) == (0, 5)

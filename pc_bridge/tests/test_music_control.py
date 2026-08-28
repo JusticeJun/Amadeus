@@ -20,11 +20,15 @@ from app.music_control import (
     CdpAppleMusicBackend,
 )
 from app.tools import MusicControlTool
+from app.music_control.controller import CatalogQueryVariant, SongCandidateJudgment
 
 
 class FakeAppleMusicBackend:
     def __init__(self) -> None:
-        self.playlists = PlaylistSnapshot((PlaylistItem("p.study", "공부할 때"),))
+        self.playlists = PlaylistSnapshot((
+            PlaylistItem("p.study", "공부할 때"),
+            PlaylistItem("pl.aimyon", "아이묭 대표곡"),
+        ))
         self.catalog_playlists = (PlaylistItem("pl.aimyon", "아이묭 대표곡"),)
         self.songs = (
             MusicItem("song.marigold", "Marigold", "aimyon", "Marigold - Single"),
@@ -68,6 +72,9 @@ class FakeAppleMusicBackend:
     def load_playlist(self, playlist_id):
         return self.queue
 
+    def playlist_tracks(self, playlist_id):
+        return self.queue
+
     def play_queue_item(self, index):
         self.position = index
         self.current = self.queue[index]
@@ -92,6 +99,40 @@ class FakeAppleMusicBackend:
     def now_playing(self):
         return self.current
 
+
+class FakeCandidateSemantics:
+    def __init__(
+        self, *, song_index=None, playlist_index=None, rewrites=(),
+        title_equivalent=True, artist_equivalent=True,
+    ):
+        self.song_index = song_index
+        self.playlist_index = playlist_index
+        self.rewrites = rewrites
+        self.title_equivalent = title_equivalent
+        self.artist_equivalent = artist_equivalent
+        self.song_calls = []
+        self.playlist_calls = []
+        self.rewrite_calls = []
+
+    def judge_song_candidate(self, action, candidates):
+        self.song_calls.append((action, candidates))
+        if self.song_index is None:
+            return SongCandidateJudgment("none", rejection_reason="no_match")
+        return SongCandidateJudgment(
+            "match", self.song_index, self.title_equivalent, self.artist_equivalent,
+            rejection_reason=(
+                "title_not_equivalent" if not self.title_equivalent
+                else "artist_not_equivalent" if not self.artist_equivalent else ""
+            ),
+        )
+
+    def judge_playlist_candidate(self, surface, candidates):
+        self.playlist_calls.append((surface, candidates))
+        return self.playlist_index
+
+    def rewrite_track_queries(self, artist_surface, title_surface):
+        self.rewrite_calls.append((artist_surface, title_surface))
+        return self.rewrites
 
 class FakeWebSocket:
     def __init__(self, response=None, error=None) -> None:
@@ -241,7 +282,7 @@ def test_controller_deduplicates_catalog_entries_only_for_the_same_isrc() -> Non
     assert result.data["now_playing"]["id"] == "single"
 
 
-def test_title_only_uses_unique_top_ranked_recording_group() -> None:
+def test_title_only_namesakes_are_not_resolved_by_rank() -> None:
     backend = FakeAppleMusicBackend()
     original = MusicItem(
         "single", "Marigold", "aimyon", "Marigold - Single",
@@ -258,8 +299,8 @@ def test_title_only_uses_unique_top_ranked_recording_group() -> None:
         MusicActionType.PLAY_SONG, title="Marigold",
     ))
 
-    assert result.ok
-    assert result.data["now_playing"]["id"] == "single"
+    assert not result.ok
+    assert result.data["reason"] == "ambiguous"
 
 
 def test_title_only_remains_ambiguous_when_artists_compete_at_top_rank() -> None:
@@ -295,7 +336,7 @@ def test_self_titled_top_result_does_not_hide_close_namesake() -> None:
     assert result.data["reason"] == "ambiguous"
 
 
-def test_personal_playlist_membership_resolves_title_only_namesake() -> None:
+def test_personal_membership_does_not_override_title_only_ambiguity() -> None:
     backend = FakeAppleMusicBackend()
     catalog_leader = MusicItem(
         "first", "Same Title", "First Artist", "Same Title - Single", "FIRST", 0,
@@ -313,8 +354,8 @@ def test_personal_playlist_membership_resolves_title_only_namesake() -> None:
         MusicActionType.PLAY_SONG, title="Same Title",
     ))
 
-    assert result.ok
-    assert result.data["now_playing"]["id"] == "second"
+    assert not result.ok
+    assert result.data["reason"] == "ambiguous"
 
 
 def test_personal_index_is_account_wide_cached_and_not_required_for_resolution() -> None:
@@ -338,13 +379,17 @@ def test_personal_index_is_account_wide_cached_and_not_required_for_resolution()
 
 def test_artist_search_resolves_cross_script_artist_name() -> None:
     backend = FakeAppleMusicBackend()
+    semantics = FakeCandidateSemantics(song_index=0)
 
-    result = AppleMusicPwaController(backend).execute(MusicAction(
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
         MusicActionType.PLAY_SONG, title="Marigold", artist="아이묭",
     ))
 
     assert result.ok
     assert result.data["now_playing"]["artist"] == "aimyon"
+    assert len(semantics.song_calls) == 1
 
     artist_result = AppleMusicPwaController(backend).execute(MusicAction(
         MusicActionType.PLAY_ARTIST, artist="아이묭",
@@ -353,7 +398,7 @@ def test_artist_search_resolves_cross_script_artist_name() -> None:
     assert artist_result.data["artist"] == "aimyon"
 
 
-def test_cli_title_uses_corroborated_cross_script_catalog_leader() -> None:
+def test_title_only_exact_catalog_surface_does_not_jump_to_cross_script_leader() -> None:
     backend = FakeAppleMusicBackend()
     original = MusicItem(
         "original", "Marigold", "aimyon", "Marigold - Single", "ORIGINAL", 0,
@@ -362,14 +407,14 @@ def test_cli_title_uses_corroborated_cross_script_catalog_leader() -> None:
         "namesake", "마리골드", "Other Artist", "마리골드 - Single", "OTHER", 2,
     )
     backend.songs = (original, korean_namesake)
-    backend.current = original
+    backend.current = korean_namesake
 
     result = AppleMusicPwaController(backend).execute(MusicAction(
         MusicActionType.PLAY_SONG, title="마리골드",
     ))
 
     assert result.ok
-    assert result.data["now_playing"]["id"] == "original"
+    assert result.data["now_playing"]["id"] == "namesake"
 
 
 def test_cli_artist_title_requires_matching_leaders_from_two_queries() -> None:
@@ -389,7 +434,9 @@ def test_cli_artist_title_requires_matching_leaders_from_two_queries() -> None:
     )
     backend.songs = (original,) + supporting + title_only[1:]
     backend.current = original
-    controller = AppleMusicPwaController(backend)
+    controller = AppleMusicPwaController(
+        backend, candidate_semantics=FakeCandidateSemantics(song_index=0),
+    )
 
     result = controller.execute(MusicAction(
         MusicActionType.PLAY_SONG, title="마리골드", artist="아이묭",
@@ -401,7 +448,7 @@ def test_cli_artist_title_requires_matching_leaders_from_two_queries() -> None:
     backend.search_songs = lambda query: (
         (original,) + supporting if "아이묭" in query else (conflicting,)
     )
-    refused = controller.execute(MusicAction(
+    refused = AppleMusicPwaController(backend).execute(MusicAction(
         MusicActionType.PLAY_SONG, title="마리골드", artist="아이묭",
     ))
     assert not refused.ok
@@ -426,7 +473,9 @@ def test_artist_qualified_cross_script_title_uses_dominant_exact_artist() -> Non
     backend.songs = (original,) + supporting
     backend.current = original
 
-    result = AppleMusicPwaController(backend).execute(MusicAction(
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=FakeCandidateSemantics(song_index=0),
+    ).execute(MusicAction(
         MusicActionType.PLAY_SONG, title="수평선", artist="백넘버",
     ))
 
@@ -434,7 +483,45 @@ def test_artist_qualified_cross_script_title_uses_dominant_exact_artist() -> Non
     assert result.data["now_playing"]["id"] == "original"
 
 
-def test_full_query_title_exact_overrides_ambiguous_first_token_hint() -> None:
+def test_corroborated_native_candidate_is_stable_without_semantic_judge() -> None:
+    backend = FakeAppleMusicBackend()
+    target = MusicItem(
+        "target", "Canonical Title", "Canonical Artist",
+        "Canonical Title - Single", "TARGET", 0,
+    )
+    supporting = tuple(
+        MusicItem(
+            f"support-{rank}", f"Other Song {rank}", "Canonical Artist",
+            search_rank=rank,
+        )
+        for rank in range(1, 5)
+    )
+    backend.songs = (target, *supporting)
+    backend.current = target
+    backend.search_songs = lambda query: (
+        (target, *supporting) if query == "spoken artist spoken title"
+        else (target,) if query == "spoken title" else ()
+    )
+    semantics = FakeCandidateSemantics(song_index=None)
+    controller = AppleMusicPwaController(
+        backend, candidate_semantics=semantics, health_cache_seconds=60,
+    )
+    action = MusicAction(
+        MusicActionType.PLAY_SONG, title="Canonical Title", artist="Canonical Artist",
+        source_query="spoken artist spoken title", artist_explicit=True,
+    )
+
+    results = [controller.execute(action) for _ in range(3)]
+
+    assert all(result.ok for result in results)
+    assert [result.data["now_playing"]["id"] for result in results] == [
+        "target", "target", "target",
+    ]
+    assert semantics.song_calls == []
+    assert semantics.rewrite_calls == []
+
+
+def test_semantic_fallback_handles_ambiguous_rule_parser_slots() -> None:
     backend = FakeAppleMusicBackend()
     original = MusicItem(
         "original", "Color Your Night", "Soundtrack Artist",
@@ -447,10 +534,14 @@ def test_full_query_title_exact_overrides_ambiguous_first_token_hint() -> None:
     backend.current = original
     action = RuleBasedMusicActionParser().parse("Color Your Night 틀어줘").action
 
-    result = AppleMusicPwaController(backend).execute(action)
+    semantics = FakeCandidateSemantics(song_index=0)
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(action)
 
     assert result.ok
     assert result.data["now_playing"]["id"] == "original"
+    assert len(semantics.song_calls) == 1
 
 
 def test_artist_hint_rejects_title_similar_cover_from_different_artist() -> None:
@@ -486,7 +577,88 @@ def test_exact_unicode_artist_and_title_resolve_and_dedupe_recording() -> None:
     assert result.data["now_playing"]["id"] == "single"
 
 
-def test_resolver_accepts_future_alternate_queries_without_changing_backend_contract() -> None:
+def test_lower_ranked_exact_match_beats_rank_zero_wrong_song() -> None:
+    backend = FakeAppleMusicBackend()
+    wrong = MusicItem("wrong", "Different Song", "Artist", search_rank=0)
+    expected = MusicItem("expected", "Target Song", "Artist", search_rank=6)
+    backend.songs = (wrong, expected)
+    backend.current = expected
+
+    result = AppleMusicPwaController(backend).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="Target Song", artist="Artist",
+        artist_explicit=True,
+    ))
+
+    assert result.ok
+    assert result.data["now_playing"]["id"] == "expected"
+
+
+def test_retrieval_diagnostic_preserves_backend_candidate_count(
+    monkeypatch, capsys,
+) -> None:
+    backend = FakeAppleMusicBackend()
+    expected = MusicItem("expected", "Target Song", "Artist")
+    backend.songs = (expected,)
+    backend.current = expected
+    monkeypatch.setenv("AMADEUS_MUSIC_DIAGNOSTICS", "1")
+
+    result = AppleMusicPwaController(backend).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="Target Song", artist="Artist",
+        source_query="Artist Target Song", artist_explicit=True,
+    ))
+
+    assert result.ok
+    diagnostic = capsys.readouterr().err
+    assert 'parsed:{"action":"play_song","artist":"Artist","title":"Target Song"' in diagnostic
+    assert 'candidate_pool:{"native_catalog_count":1,"rewritten_catalog_count":0' \
+        in diagnostic
+    assert '"personal_index_count":0,"merged_candidate_count":1' in diagnostic
+
+
+def test_normalized_title_and_artist_match_without_semantics() -> None:
+    backend = FakeAppleMusicBackend()
+    expected = MusicItem("expected", "Target: Song!", "The Artist")
+    backend.songs = (expected,)
+    backend.current = expected
+    semantics = FakeCandidateSemantics(song_index=None)
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="target song", artist="the-artist",
+        artist_explicit=True,
+    ))
+
+    assert result.ok
+    assert semantics.song_calls == []
+
+
+@pytest.mark.parametrize("judgment", [
+    SongCandidateJudgment("match", 99, True, True),
+    SongCandidateJudgment("error", error_category="provider_error"),
+])
+def test_invalid_or_failed_semantic_match_never_executes(judgment) -> None:
+    backend = FakeAppleMusicBackend()
+    backend.songs = (MusicItem("actual", "Canonical", "Artist"),)
+    backend.play_song = lambda item_id: pytest.fail(f"unexpected playback: {item_id}")
+
+    class FailedSemantics(FakeCandidateSemantics):
+        def judge_song_candidate(self, action, candidates):
+            self.song_calls.append((action, candidates))
+            return judgment
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=FailedSemantics(),
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="surface", artist="spoken artist",
+        artist_explicit=True,
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "no_match"
+
+
+def test_structured_rewrite_queries_return_to_native_catalog_search() -> None:
     backend = FakeAppleMusicBackend()
     expected = MusicItem("canonical", "Canonical Title", "Canonical Artist")
     queries = []
@@ -498,7 +670,12 @@ def test_resolver_accepts_future_alternate_queries_without_changing_backend_cont
     backend.search_songs = search
     backend.songs = (expected,)
     backend.current = expected
-    result = AppleMusicPwaController(backend).execute(MusicAction(
+    semantics = FakeCandidateSemantics(
+        song_index=0, rewrites=(CatalogQueryVariant(title="Canonical Title"),),
+    )
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
         MusicActionType.PLAY_SONG,
         title="surface title",
         source_query="surface query",
@@ -507,6 +684,55 @@ def test_resolver_accepts_future_alternate_queries_without_changing_backend_cont
 
     assert result.ok
     assert queries[:2] == ["surface query", "Canonical Title"]
+    assert len(semantics.song_calls) == 1
+
+
+def test_rewritten_searches_are_bounded_and_deduplicated_by_catalog_id() -> None:
+    backend = FakeAppleMusicBackend()
+    target = MusicItem("catalog-id", "Canonical", "Canonical Artist")
+    queries = []
+
+    def search(query):
+        queries.append(query)
+        return () if len(queries) == 1 else (target,)
+
+    backend.search_songs = search
+    backend.songs = (target,)
+    backend.current = target
+    rewrites = tuple(
+        CatalogQueryVariant(f"Artist {index}", f"Title {index}")
+        for index in range(4)
+    )
+    semantics = FakeCandidateSemantics(song_index=0, rewrites=rewrites)
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="surface title", artist="surface artist",
+        source_query="surface artist surface title", artist_explicit=True,
+    ))
+
+    assert result.ok
+    assert len(queries) == 5
+    assert semantics.rewrite_calls == [("surface artist", "surface title")]
+    assert len(semantics.song_calls) == 1
+    assert [item.item_id for item in semantics.song_calls[0][1]] == ["catalog-id"]
+
+
+def test_clean_structured_fields_are_the_only_rewriter_input() -> None:
+    backend = FakeAppleMusicBackend()
+    backend.songs = ()
+    semantics = FakeCandidateSemantics()
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, artist="clean artist", title="clean title",
+        source_query="clean artist clean title", artist_explicit=True,
+    ))
+
+    assert not result.ok
+    assert semantics.rewrite_calls == [("clean artist", "clean title")]
 
 
 def test_playlist_resolver_uses_alternate_names_but_keeps_library_authoritative() -> None:
@@ -521,6 +747,278 @@ def test_playlist_resolver_uses_alternate_names_but_keeps_library_authoritative(
 
     assert result.ok
     assert result.data["playlist"] == "공부할 때"
+
+
+def test_playlist_resolver_uses_unique_artist_membership_for_cross_script_name() -> None:
+    backend = FakeAppleMusicBackend()
+    expected = PlaylistItem("personal.artist", "BackNumber")
+    other = PlaylistItem("personal.other", "Focus")
+    backend.playlists = PlaylistSnapshot((expected, other))
+    artist_tracks = tuple(
+        MusicItem(f"artist-{rank}", f"Song {rank}", "back number", search_rank=rank)
+        for rank in range(5)
+    )
+    other_tracks = tuple(
+        MusicItem(f"other-{rank}", f"Other {rank}", "other artist", search_rank=rank)
+        for rank in range(5)
+    )
+    backend.search_playlists = lambda query: ()
+    backend.search_songs = lambda query: artist_tracks
+    backend.playlist_tracks = lambda playlist_id: (
+        artist_tracks if playlist_id == expected.playlist_id else other_tracks
+    )
+    backend.queue = artist_tracks
+    backend.current = artist_tracks[0]
+
+    result = AppleMusicPwaController(backend).execute(MusicAction(
+        MusicActionType.PLAY_PLAYLIST, playlist="백넘버",
+    ))
+
+    assert result.ok
+    assert result.data["playlist"] == "BackNumber"
+
+
+def test_playlist_membership_fallback_refuses_competing_personal_playlists() -> None:
+    backend = FakeAppleMusicBackend()
+    backend.playlists = PlaylistSnapshot((
+        PlaylistItem("personal.one", "BackNumber"),
+        PlaylistItem("personal.two", "Favorites"),
+    ))
+    artist_tracks = tuple(
+        MusicItem(f"artist-{rank}", f"Song {rank}", "back number", search_rank=rank)
+        for rank in range(5)
+    )
+    backend.search_playlists = lambda query: ()
+    backend.search_songs = lambda query: artist_tracks
+    backend.playlist_tracks = lambda playlist_id: artist_tracks
+
+    result = AppleMusicPwaController(backend).execute(MusicAction(
+        MusicActionType.PLAY_PLAYLIST, playlist="백넘버",
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "ambiguous"
+    assert result.data["candidate_options"] == ["BackNumber", "Favorites"]
+
+
+def test_playlist_semantics_cannot_override_real_personal_candidate_ambiguity() -> None:
+    backend = FakeAppleMusicBackend()
+    backend.playlists = PlaylistSnapshot((
+        PlaylistItem("personal.one", "Canonical Artist"),
+        PlaylistItem("personal.two", "Canonical Artist Live Set"),
+    ))
+    artist_tracks = tuple(
+        MusicItem(f"artist-{rank}", f"Song {rank}", "canonical artist", search_rank=rank)
+        for rank in range(5)
+    )
+    backend.search_playlists = lambda query: ()
+    backend.search_songs = lambda query: artist_tracks
+    backend.playlist_tracks = lambda playlist_id: artist_tracks
+    backend.queue = artist_tracks
+    backend.current = artist_tracks[0]
+    semantics = FakeCandidateSemantics(playlist_index=1)
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_PLAYLIST, playlist="translated live playlist",
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "ambiguous"
+    assert result.data["candidate_options"] == [
+        "Canonical Artist", "Canonical Artist Live Set",
+    ]
+    assert semantics.playlist_calls == []
+
+
+def test_transport_bypasses_candidate_discovery() -> None:
+    backend = FakeAppleMusicBackend()
+    semantics = FakeCandidateSemantics(
+        song_index=0, rewrites=(CatalogQueryVariant(title="unused"),),
+    )
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(MusicActionType.PAUSE))
+
+    assert result.ok
+    assert semantics.song_calls == []
+    assert semantics.playlist_calls == []
+    assert semantics.rewrite_calls == []
+
+
+def test_semantic_alternate_query_can_discover_cross_script_title() -> None:
+    backend = FakeAppleMusicBackend()
+    expected = MusicItem(
+        "expected", "Suiheisen", "back number", "Suiheisen - Single", "RECORDING", 0,
+    )
+    wrong = MusicItem("wrong", "수평선", "other artist", "Other", "OTHER", 0)
+    queries = []
+
+    def search(query):
+        queries.append(query)
+        if query == "back number Suiheisen":
+            return (expected,)
+        if query == "수평선":
+            return (wrong,)
+        return ()
+
+    backend.search_songs = search
+    backend.songs = (expected, wrong)
+    backend.current = expected
+    semantics = FakeCandidateSemantics(
+        song_index=0,
+        rewrites=(CatalogQueryVariant("back number", "Suiheisen"),),
+    )
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="수평선", artist="백넘버",
+        source_query="백넘버 수평선",
+        alternate_queries=("back number Suiheisen",), artist_explicit=True,
+    ))
+
+    assert result.ok
+    assert result.data["now_playing"]["id"] == "expected"
+    assert "back number Suiheisen" in queries
+
+
+def test_retrieval_first_judges_only_actual_native_song_candidates() -> None:
+    backend = FakeAppleMusicBackend()
+    target = MusicItem(
+        "target", "Canonical Cross Script Title", "Canonical Artist",
+        "Catalog Album", "TARGET", 3,
+    )
+    broad = tuple(
+        MusicItem(f"other-{rank}", f"Other {rank}", "Canonical Artist", search_rank=rank)
+        for rank in range(3)
+    ) + (target,)
+    backend.songs = broad
+    backend.current = target
+    backend.search_songs = lambda query: broad
+    semantics = FakeCandidateSemantics(song_index=3)
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="한국어 곡명", artist="한국어 가수",
+        source_query="한국어 가수 한국어 곡명",
+    ))
+
+    assert result.ok
+    assert result.data["now_playing"]["id"] == "target"
+    assert [item.item_id for item in semantics.song_calls[0][1]] == [
+        "other-0", "other-1", "other-2", "target",
+    ]
+    assert semantics.rewrite_calls == []
+
+
+def test_uncertain_candidate_judgment_does_not_execute() -> None:
+    backend = FakeAppleMusicBackend()
+    broad = (MusicItem("wrong", "Wrong Song", "Canonical Artist"),)
+    backend.search_songs = lambda query: broad
+    backend.play_song = lambda item_id: pytest.fail(f"unexpected playback: {item_id}")
+    semantics = FakeCandidateSemantics(song_index=None)
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="한국어 곡명", artist="한국어 가수",
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "no_match"
+    assert len(semantics.song_calls) == 1
+
+
+def test_candidate_judgment_with_artist_evidence_only_cannot_execute_explicit_title() -> None:
+    backend = FakeAppleMusicBackend()
+    broad = (MusicItem("artist-top", "Unrelated Top Song", "Canonical Artist"),)
+    backend.search_songs = lambda query: broad
+    backend.play_song = lambda item_id: pytest.fail(f"unexpected playback: {item_id}")
+    semantics = FakeCandidateSemantics(
+        song_index=0, title_equivalent=False, artist_equivalent=True,
+    )
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="spoken title", artist="spoken artist",
+        artist_explicit=True,
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "no_match"
+
+
+def test_search_recovery_runs_only_when_initial_retrieval_is_empty() -> None:
+    backend = FakeAppleMusicBackend()
+    target = MusicItem(
+        "target", "Canonical Title", "Canonical Artist",
+        "Canonical Title - Single", "TARGET", 0,
+    )
+    queries = []
+
+    def search(query):
+        queries.append(query)
+        return (target,) if query == "recovery hint" else ()
+
+    backend.search_songs = search
+    backend.songs = (target,)
+    backend.current = target
+    semantics = FakeCandidateSemantics(
+        song_index=0, rewrites=(CatalogQueryVariant(title="recovery hint"),),
+    )
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="surface title", artist="surface artist",
+        source_query="surface artist surface title",
+    ))
+
+    assert result.ok
+    assert queries == ["surface artist surface title", "recovery hint"]
+    assert semantics.rewrite_calls == [("surface artist", "surface title")]
+
+
+def test_search_recovery_hint_is_not_execution_evidence_without_title_equivalence() -> None:
+    backend = FakeAppleMusicBackend()
+    recovered = MusicItem(
+        "wrong", "Generated Hint", "Canonical Artist", "Generated Hint - Single",
+    )
+    backend.search_songs = lambda query: (recovered,) if query == "generated hint" else ()
+    backend.play_song = lambda item_id: pytest.fail(f"unexpected playback: {item_id}")
+    semantics = FakeCandidateSemantics(
+        song_index=0, rewrites=(CatalogQueryVariant(title="generated hint"),),
+        title_equivalent=False, artist_equivalent=True,
+    )
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(
+        MusicActionType.PLAY_SONG, title="missing title", artist="spoken artist",
+        artist_explicit=True,
+    ))
+
+    assert not result.ok
+    assert result.data["reason"] == "no_match"
+
+
+def test_native_exact_match_skips_candidate_semantics_and_recovery() -> None:
+    backend = FakeAppleMusicBackend()
+    semantics = FakeCandidateSemantics(
+        song_index=0, rewrites=(CatalogQueryVariant(title="unused"),),
+    )
+
+    result = AppleMusicPwaController(
+        backend, candidate_semantics=semantics,
+    ).execute(MusicAction(MusicActionType.PLAY_SONG, title="Marigold"))
+
+    assert result.ok
+    assert semantics.song_calls == []
+    assert semantics.rewrite_calls == []
 
 
 def test_artist_resolver_uses_alternate_queries_and_verifies_now_playing() -> None:
@@ -683,8 +1181,67 @@ def test_cdp_connection_timeout_is_reported_as_safe_backend_failure(monkeypatch)
         lambda *args, **kwargs: (_ for _ in ()).throw(WebSocketTimeoutException()),
     )
 
-    with pytest.raises(TimeoutError, match="CDP timed out"):
+    with pytest.raises(TimeoutError, match=(
+        "operation=health_check, stage=connect, timeout=websocket_connect, "
+        "recovery=target_rediscovery_attempted"
+    )):
         backend.selector_health()
+
+
+def test_cdp_connect_failure_rediscovers_target_once_before_send(monkeypatch) -> None:
+    backend = CdpAppleMusicBackend()
+    targets = iter((
+        {"webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/stale"},
+        {"webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/fresh"},
+    ))
+    socket = FakeWebSocket({
+        "id": 1,
+        "result": {"result": {"value": {
+            "authorized": True, "navigation": True, "player": True,
+        }}},
+    })
+    connections = []
+    monkeypatch.setattr(backend, "_target", lambda: next(targets))
+
+    def connect(url, **kwargs):
+        connections.append(url)
+        if url.endswith("/stale"):
+            raise WebSocketTimeoutException()
+        return socket
+
+    monkeypatch.setattr("app.music_control.cdp.create_connection", connect)
+
+    assert backend.selector_health()["authorized"] is True
+    assert connections == [
+        "ws://127.0.0.1/devtools/page/stale",
+        "ws://127.0.0.1/devtools/page/fresh",
+    ]
+    assert len(socket.sent) == 1
+
+
+def test_cdp_runtime_timeout_is_classified_and_never_retried(monkeypatch) -> None:
+    backend = CdpAppleMusicBackend()
+    socket = FakeWebSocket(error=WebSocketTimeoutException())
+    target_calls = []
+    connections = []
+    monkeypatch.setattr(backend, "_target", lambda: (
+        target_calls.append(True)
+        or {"webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/1"}
+    ))
+    monkeypatch.setattr(
+        "app.music_control.cdp.create_connection",
+        lambda *args, **kwargs: connections.append(True) or socket,
+    )
+
+    with pytest.raises(TimeoutError, match=(
+        "operation=catalog_song_search, stage=runtime_evaluation, "
+        "timeout=websocket_receive, "
+        "recovery=not_attempted"
+    )):
+        backend.search_songs("query")
+
+    assert len(target_calls) == len(connections) == 1
+    assert len(socket.sent) == 1
 
 
 def test_cdp_websocket_closes_after_success_and_each_call_is_fresh(monkeypatch) -> None:
@@ -809,7 +1366,28 @@ def test_cdp_catalog_search_uses_music_api_and_preserves_isrc(monkeypatch) -> No
     expression = socket.sent[0]["params"]["expression"]
     assert "mk.api.music" in expression
     assert "/v1/catalog/${mk.storefrontId}/search" in expression
+    assert "__amadeusCatalogDiagnostics" in expression
+    assert "playParamsId" in expression
+    assert "playParamsKind" in expression
+    assert "storefrontId" in expression
     assert socket.closed
+
+
+def test_cdp_catalog_search_reports_raw_and_extracted_counts(monkeypatch, capsys) -> None:
+    backend = CdpAppleMusicBackend()
+    monkeypatch.setenv("AMADEUS_MUSIC_DIAGNOSTICS", "1")
+    monkeypatch.setattr(backend, "_evaluate", lambda operation, expression, args=None: [
+        {"id": "one", "title": "One", "artist": "Artist", "searchRank": 0},
+        {"id": "two", "title": "Two", "artist": "Artist", "searchRank": 1},
+    ])
+
+    items = backend.search_songs("Artist Song")
+
+    assert len(items) == 2
+    diagnostic = capsys.readouterr().err
+    assert '"backend_status":"ok"' in diagnostic
+    assert '"raw_song_count":2' in diagnostic
+    assert '"extracted_count":2' in diagnostic
 
 
 def test_cdp_library_playlists_use_authorized_music_api_not_current_dom(monkeypatch) -> None:
@@ -841,7 +1419,8 @@ def test_cdp_personal_index_reads_library_and_all_playlists_without_known_ids(
     backend = CdpAppleMusicBackend()
     expressions = []
 
-    def fake_evaluate(expression, args=None):
+    def fake_evaluate(operation, expression, args=None):
+        assert operation == "personal_music_index"
         expressions.append(expression)
         return {"items": [{
             "id": "catalog.song", "title": "Song", "artist": "Artist",
@@ -870,8 +1449,12 @@ def test_cdp_playlist_queue_and_metadata_use_bounded_readiness_polling(monkeypat
         {"id": 1, "result": {"result": {"value": [{
             "id": "song.first", "title": "First", "artist": "Artist",
         }]}}},
+        {"id": 1, "result": {"result": {"value": {"dispatched": True}}}},
         {"id": 1, "result": {"result": {"value": {
-            "id": "song.first", "title": "First", "artist": "Artist",
+            "token": "123", "phase": "play", "failed": False,
+            "isPlaying": True, "expectedNowPlayingId": "song.first", "current": {
+                "id": "song.first", "title": "First", "artist": "Artist",
+            },
         }}}},
     ))
     sockets = []
@@ -885,17 +1468,21 @@ def test_cdp_playlist_queue_and_metadata_use_bounded_readiness_polling(monkeypat
         "webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/1",
     })
     monkeypatch.setattr("app.music_control.cdp.create_connection", connect)
+    monkeypatch.setattr("app.music_control.cdp.time.monotonic_ns", lambda: 123)
 
     queue = backend.load_playlist("p.goodnight")
     played = backend.play_queue_item(0)
 
     assert queue[0].item_id == played.item_id == "song.first"
     queue_expression = sockets[0].sent[0]["params"]["expression"]
-    play_expression = sockets[1].sent[0]["params"]["expression"]
+    dispatch_expression = sockets[1].sent[0]["params"]["expression"]
+    verify_expression = sockets[2].sent[0]["params"]["expression"]
     assert "queueDeadline" in queue_expression
     assert "await wait(100)" in queue_expression
-    assert "metadataDeadline" in play_expression
-    assert "expectedNowPlayingId" in play_expression
+    assert "void (async()=>" in dispatch_expression
+    assert "state.phase='change_media_item'" in dispatch_expression
+    assert "state.phase='play'" in dispatch_expression
+    assert "__amadeusPlaybackCommand" in verify_expression
 
 
 @pytest.mark.parametrize(("method", "expected_fragment"), [
@@ -908,51 +1495,162 @@ def test_cdp_transport_waits_for_verified_state_change(
     monkeypatch, method, expected_fragment,
 ) -> None:
     backend = CdpAppleMusicBackend()
-    socket = FakeWebSocket({
-        "id": 1,
-        "result": {"result": {"value": {
-            "id": "song.changed", "title": "Changed", "artist": "Artist",
-        }}},
-    })
-    monkeypatch.setattr(backend, "_target", lambda: {
-        "webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/1",
-    })
-    monkeypatch.setattr(
-        "app.music_control.cdp.create_connection", lambda *args, **kwargs: socket,
-    )
+    calls = []
+
+    def evaluate(operation, expression, args=None):
+        calls.append((operation, expression, args))
+        if operation == "playback_command_dispatch":
+            return {"dispatched": True}
+        return {
+            "token": args["commandToken"], "phase": "command_complete",
+            "failed": False, "isPlaying": method != "pause",
+            "previousNowPlayingId": (
+                "song.previous" if method in {"next", "previous"} else ""
+            ),
+            "current": {"id": "song.changed", "title": "Changed", "artist": "Artist"},
+        }
+
+    monkeypatch.setattr(backend, "_evaluate", evaluate)
 
     getattr(backend, method)()
 
-    expression = socket.sent[0]["params"]["expression"]
-    assert expected_fragment in expression
-    assert "playbackReady" in expression
-    assert "changedItemReady" in expression
+    assert expected_fragment in calls[0][1] or expected_fragment in json.dumps(calls[0][2])
+    assert [call[0] for call in calls] == [
+        "playback_command_dispatch", "playback_verification",
+    ]
 
 
 def test_cdp_song_play_is_idempotent_for_current_track(monkeypatch) -> None:
     backend = CdpAppleMusicBackend()
-    socket = FakeWebSocket({
-        "id": 1,
-        "result": {"result": {"value": {
-            "id": "1402042897", "title": "Marigold", "artist": "aimyon",
-            "album": "Marigold - Single",
-        }}},
-    })
-    monkeypatch.setattr(backend, "_target", lambda: {
-        "webSocketDebuggerUrl": "ws://127.0.0.1/devtools/page/1",
-    })
-    monkeypatch.setattr(
-        "app.music_control.cdp.create_connection", lambda *args, **kwargs: socket,
-    )
+    calls = []
+
+    def evaluate(operation, expression, args=None):
+        calls.append((operation, expression, args))
+        if operation == "playback_command_dispatch":
+            return {"dispatched": True}
+        return {
+            "token": args["commandToken"], "phase": "play", "failed": False,
+            "isPlaying": True, "current": {
+                "id": "1402042897", "title": "Marigold", "artist": "aimyon",
+                "album": "Marigold - Single",
+            },
+        }
+
+    monkeypatch.setattr(backend, "_evaluate", evaluate)
 
     assert backend.play_song("1402042897").item_id == "1402042897"
-    expression = socket.sent[0]["params"]["expression"]
-    assert "mk.nowPlayingItem?.id" in expression
-    assert "mk.setQueue({song:args.id})" in expression
-    assert "expectedNowPlayingId" in expression
-    assert "metadataDeadline" in expression
-    assert "await wait(100)" in expression
-    assert socket.closed
+    dispatch = calls[0][1]
+    assert "mk.nowPlayingItem?.id" in dispatch
+    assert "mk.setQueue({songs:[args.id]})" in dispatch
+    assert "mk.setQueue({song:args.id})" not in dispatch
+    assert "state.phase='set_queue_started'" in dispatch
+    assert "state.phase='set_queue_resolved'" in dispatch
+    assert "queueContainsExpected" in dispatch
+    assert "state.phase='play_started'" in dispatch
+    assert "state.phase='play_resolved'" in dispatch
+    assert "state.queueOptions={songs:[String(args.id)]}" in dispatch
+    assert "state.currentAfterSetQueue" in dispatch
+    assert "state.currentAfterPlay" in dispatch
+    assert calls[1][0] == "playback_verification"
+
+
+def test_cdp_success_diagnostic_is_explicitly_opt_in(monkeypatch, capsys) -> None:
+    backend = CdpAppleMusicBackend()
+    monkeypatch.setenv("AMADEUS_MUSIC_DIAGNOSTICS", "1")
+    monkeypatch.setattr(backend, "_evaluate", lambda operation, expression, args=None: (
+        {"dispatched": True} if operation == "playback_command_dispatch" else {
+            "token": args["commandToken"], "phase": "command_complete",
+            "failed": False, "isPlaying": True,
+            "current": {"id": "song.expected", "title": "Expected", "artist": "Artist"},
+            "diagnostics": {"queueOptions": {"songs": ["song.expected"]}},
+        }
+    ))
+
+    backend.play_song("song.expected")
+
+    diagnostic = capsys.readouterr().err
+    assert diagnostic.startswith("[music_playback_diagnostic] ")
+    assert '"queueOptions":{"songs":["song.expected"]}' in diagnostic
+
+
+def test_cdp_unresolved_command_promise_times_out_in_verification_without_retry(
+    monkeypatch,
+) -> None:
+    backend = CdpAppleMusicBackend(timeout_seconds=8)
+    calls = []
+    clock = iter((0.0, 0.0, 9.0))
+    monkeypatch.setattr("app.music_control.cdp.time.monotonic", lambda: next(clock))
+    monkeypatch.setattr("app.music_control.cdp.time.sleep", lambda seconds: None)
+
+    def evaluate(operation, expression, args=None):
+        calls.append((operation, expression, args))
+        if operation == "playback_command_dispatch":
+            return {"dispatched": True}
+        return {
+            "token": args["commandToken"], "phase": "set_queue", "failed": False,
+            "isPlaying": False, "current": None,
+        }
+
+    monkeypatch.setattr(backend, "_evaluate", evaluate)
+
+    with pytest.raises(TimeoutError, match=(
+        "operation=playback_verification, stage=state_poll, "
+        "timeout=deadline_exceeded, recovery=not_attempted, command_phase=set_queue"
+    )):
+        backend.play_song("song.expected")
+
+    assert [call[0] for call in calls] == [
+        "playback_command_dispatch", "playback_verification",
+    ]
+    assert sum(call[0] == "playback_command_dispatch" for call in calls) == 1
+
+
+def test_cdp_command_completion_without_verified_playback_is_not_success(
+    monkeypatch,
+) -> None:
+    backend = CdpAppleMusicBackend(timeout_seconds=8)
+    clock = iter((0.0, 0.0, 9.0))
+    monkeypatch.setattr("app.music_control.cdp.time.monotonic", lambda: next(clock))
+    monkeypatch.setattr("app.music_control.cdp.time.sleep", lambda seconds: None)
+
+    def evaluate(operation, expression, args=None):
+        if operation == "playback_command_dispatch":
+            return {"dispatched": True}
+        return {
+            "token": args["commandToken"], "phase": "command_complete",
+            "failed": False, "isPlaying": False,
+            "current": {"id": "song.previous", "title": "Previous", "artist": "Artist"},
+        }
+
+    monkeypatch.setattr(backend, "_evaluate", evaluate)
+
+    with pytest.raises(TimeoutError, match="command_phase=command_complete") as error:
+        backend.play_song("song.expected")
+
+    message = str(error.value)
+    assert '"firstObserved"' in message
+    assert '"lastObserved"' in message
+    assert '"current":{"id":"song.previous"' in message
+
+
+def test_cdp_set_queue_rejection_is_distinct_from_pending(monkeypatch) -> None:
+    backend = CdpAppleMusicBackend()
+
+    def evaluate(operation, expression, args=None):
+        if operation == "playback_command_dispatch":
+            return {"dispatched": True}
+        return {
+            "token": args["commandToken"], "phase": "command_failed",
+            "failurePhase": "set_queue", "failed": True,
+            "isPlaying": False, "current": None,
+        }
+
+    monkeypatch.setattr(backend, "_evaluate", evaluate)
+
+    with pytest.raises(MusicControlError, match="failed at set_queue") as error:
+        backend.play_song("song.expected")
+
+    assert error.value.code == "playback_command_failed"
 
 
 def test_tool_failure_context_never_claims_playback_success() -> None:
@@ -992,7 +1690,11 @@ def test_ambiguous_title_only_context_requests_artist_clarification() -> None:
 def test_success_context_separates_requested_display_from_canonical_metadata() -> None:
     backend = FakeAppleMusicBackend()
     tool = MusicControlTool(
-        RuleBasedMusicActionParser(), AppleMusicPwaController(backend),
+        RuleBasedMusicActionParser(), AppleMusicPwaController(
+            backend, candidate_semantics=FakeCandidateSemantics(
+                song_index=0, rewrites=(CatalogQueryVariant(title="Marigold"),),
+            ),
+        ),
     )
 
     result = tool.run("마리골드 틀어줘")
@@ -1006,6 +1708,21 @@ def test_success_context_separates_requested_display_from_canonical_metadata() -
     assert result.data["response_display_artist"] == "aimyon"
     assert "response_display_title" in context
     assert "canonical metadata는 검증 전용" in context
+
+
+def test_success_display_uses_verified_artist_not_raw_request_surface() -> None:
+    backend = FakeAppleMusicBackend()
+    tool = MusicControlTool(
+        RuleBasedMusicActionParser(), AppleMusicPwaController(
+            backend, candidate_semantics=FakeCandidateSemantics(song_index=0),
+        ),
+    )
+
+    result = tool.run("아이묭의 마리골드 틀어줘")
+
+    assert result.ok
+    assert result.data["requested_artist"] == "아이묭"
+    assert result.data["response_display_artist"] == "aimyon"
 
 
 def test_now_playing_without_requested_title_uses_canonical_display() -> None:

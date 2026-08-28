@@ -75,6 +75,7 @@ def main() -> int:
                 profile_dir=settings.apple_music_profile_dir,
             ),
             playlist_cache_seconds=settings.apple_music_playlist_cache_seconds,
+            candidate_semantics=music_interpreter,
         ),
     )]
     semantic_router = create_default_semantic_router(apps, music_interpreter)

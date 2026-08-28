@@ -7,7 +7,7 @@ from .input_provider import InputProvider
 from .llm import LlmClient, LlmError
 from .memory import ConversationMemory
 from .models import ChatMessage, LlmResult, is_repetitive_reply
-from .routing import RoutingRequest, RuleBasedSemanticRouter, SemanticRouter
+from .routing import RouteDecision, RoutingRequest, RuleBasedSemanticRouter, SemanticRouter
 from .serial_bridge import SerialBridge
 from .tts import TtsEngine, TtsError
 from .tools import ToolExecutor
@@ -58,6 +58,7 @@ class ConversationManager:
         self._neutral_hold = neutral_hold_seconds
         self._router = semantic_router or RuleBasedSemanticRouter()
         self._executor = tool_executor or ToolExecutor()
+        self._pending_clarification: tuple[str, dict[str, object]] | None = None
 
     def run(self) -> None:
         print("Amadeus PC Bridge - 종료하려면 /quit 또는 Ctrl+C")
@@ -70,15 +71,31 @@ class ConversationManager:
                 continue
             turn_started = time.perf_counter()
             history = self._memory.messages()
-            route = self._router.route(RoutingRequest(user_text, tuple(history)))
+            continuation = None
+            pending = self._pending_clarification
+            self._pending_clarification = None
+            if pending is not None:
+                continuation = self._executor.continue_clarification(
+                    pending[0], pending[1], user_text, tuple(history),
+                )
+            route = (
+                RouteDecision()
+                if continuation is not None
+                else self._router.route(RoutingRequest(user_text, tuple(history)))
+            )
             if route.planning_required:
                 print(f"[route] planning required: {route.planning_reason}")
                 history = history + [ChatMessage("system", _PLANNING_REQUIRED_CONTEXT)]
-            executions = self._executor.execute(route, user_text, tuple(history))
+            executions = (
+                (continuation,)
+                if continuation is not None
+                else self._executor.execute(route, user_text, tuple(history))
+            )
             failed_side_effect = False
             successful_side_effect = False
             partial_side_effect = False
             clarification_required = False
+            clarification_options: tuple[str, ...] = ()
             verified_sources: set[str] = set()
             for execution in executions:
                 tool_result = execution.result
@@ -107,6 +124,19 @@ class ConversationManager:
                     and not tool_result.ok
                     and tool_result.data.get("reason") == "ambiguous"
                 )
+                clarification = tool_result.data.get("clarification")
+                if (
+                    execution.side_effecting
+                    and not tool_result.ok
+                    and isinstance(clarification, dict)
+                    and len(clarification) <= 4
+                ):
+                    self._pending_clarification = (tool_result.name, clarification)
+                    options = clarification.get("candidate_options")
+                    if isinstance(options, list) and all(
+                        isinstance(option, str) and option for option in options
+                    ):
+                        clarification_options = tuple(options[:5])
             if failed_side_effect:
                 failure_context = (
                     _PARTIAL_SIDE_EFFECT_CONTEXT
@@ -125,6 +155,7 @@ class ConversationManager:
                     successful_side_effect=successful_side_effect,
                     partial_side_effect=partial_side_effect,
                     clarification_required=clarification_required,
+                    clarification_options=clarification_options,
                 )
                 result = self._enforce_live_data_truth(
                     user_text, history, result, verified_sources,
@@ -198,6 +229,7 @@ class ConversationManager:
         successful_side_effect: bool,
         partial_side_effect: bool,
         clarification_required: bool,
+        clarification_options: tuple[str, ...] = (),
     ) -> LlmResult:
         unverified_success = (
             not successful_side_effect and _has_execution_success_claim(result.reply)
@@ -208,6 +240,7 @@ class ConversationManager:
             return result
         if not partial_side_effect and _is_truthful_non_execution_reply(
             result.reply, planning_required, clarification_required,
+            clarification_options,
         ):
             return result
         print("[llm] 실행되지 않은 작업을 성공으로 표현하지 않도록 답변을 다시 생성합니다.")
@@ -228,11 +261,14 @@ class ConversationManager:
             return replacement
         if not partial_side_effect and _is_truthful_non_execution_reply(
             replacement.reply, planning_required, clarification_required,
+            clarification_options,
         ):
             return replacement
         fallback = _PLANNING_FALLBACK if planning_required else (
             _PARTIAL_EXECUTION_FALLBACK if partial_side_effect else _NON_EXECUTION_FALLBACK
         )
+        if clarification_options:
+            fallback = f"{'랑 '.join(clarification_options)} 중 어떤 걸 선택할래?"
         return LlmResult(reply=fallback, emotion="answering")
 
     def _enforce_live_data_truth(
@@ -259,6 +295,7 @@ def _is_truthful_non_execution_reply(
     reply: str,
     planning_required: bool,
     clarification_required: bool = False,
+    clarification_options: tuple[str, ...] = (),
 ) -> bool:
     compact = "".join(reply.lower().split())
     acknowledges_failure = any(phrase in compact for phrase in (
@@ -270,6 +307,15 @@ def _is_truthful_non_execution_reply(
         "어느가수", "어떤가수", "가수", "아티스트", "어느곡", "어떤곡", "무슨곡",
         "여러곡", "동명곡",
     ))
+    if clarification_options:
+        mentions_options = all(
+            "".join(option.casefold().split()) in compact for option in clarification_options
+        )
+        requests_selection = any(phrase in compact for phrase in (
+            "어느", "어떤", "뭘", "무엇", "골라", "선택", "중", "할래", "할까",
+        )) or "?" in reply
+        asks_for_clarification = mentions_options and requests_selection
+        acknowledges_failure = False
     unrelated_suggestion = planning_required and any(phrase in compact for phrase in (
         "어때", "대신", "추천", "마셔", "챙겨",
     ))
@@ -279,10 +325,10 @@ def _is_truthful_non_execution_reply(
 
 def _has_execution_success_claim(reply: str) -> bool:
     compact = "".join(reply.lower().split())
-    return any(phrase in compact for phrase in (
-        "줄였", "올렸", "맞췄", "설정했", "켰어", "켰다", "열었", "실행했",
+    return _has_future_execution_claim(reply) or any(phrase in compact for phrase in (
+        "줄였", "낮췄", "내렸", "올렸", "맞췄", "설정했", "켰어", "켰다", "열었", "실행했",
         "완료했", "바꿨", "음소거했", "재생했", "멈췄", "정지했", "넘겼",
-        "켜줄게", "틀었",
+        "켜줄게", "틀었", "재생돼", "재생됐", "재생중", "재생되고",
     ))
 
 

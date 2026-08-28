@@ -292,6 +292,23 @@ def test_unrouted_side_effect_cannot_be_reported_as_success() -> None:
     assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
 
 
+def test_unrouted_relative_volume_followup_cannot_claim_success() -> None:
+    llm = RepeatingLlm("볼륨을 조금 낮췄어.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["조금만 다시 내려줘", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
 def test_music_semantic_failure_cannot_imply_an_unverified_followup() -> None:
     class FailedSemanticClient:
         def complete(self, request):

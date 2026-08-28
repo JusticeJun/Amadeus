@@ -14,6 +14,9 @@ from .semantic_llm import (
 )
 
 
+_MIN_SEMANTIC_COMPLETION_TOKENS = 1024
+
+
 class GroqSemanticLlmClient(SemanticLlmClient):
     """Provider adapter for strict structured semantic tasks."""
 
@@ -39,7 +42,10 @@ class GroqSemanticLlmClient(SemanticLlmClient):
                 {"role": "user", "content": json.dumps(request.input, ensure_ascii=False)},
             ],
             "temperature": 0,
-            "max_completion_tokens": self._settings.groq_max_completion_tokens,
+            "max_completion_tokens": max(
+                _MIN_SEMANTIC_COMPLETION_TOKENS,
+                self._settings.groq_max_completion_tokens,
+            ),
             "reasoning_effort": self._settings.music_semantic_reasoning_effort,
             "include_reasoning": False,
             "response_format": {"type": "json_schema", "json_schema": {
@@ -82,7 +88,7 @@ class GroqSemanticLlmClient(SemanticLlmClient):
                 code = "rate_limit" if exc.code == 429 else (
                     "provider_unavailable" if exc.code >= 500 else "provider_error"
                 )
-                detail, provider_code = _safe_http_error_details(exc)
+                detail, provider_code = _safe_http_error_details(exc, request.schema)
                 retryable = code in {"rate_limit", "provider_unavailable"} or (
                     provider_code == "json_validate_failed"
                 )
@@ -103,7 +109,10 @@ class GroqSemanticLlmClient(SemanticLlmClient):
         raise SemanticLlmError("provider_unavailable", "semantic request failed")
 
 
-def _safe_http_error_details(exc: urllib.error.HTTPError) -> tuple[str, str]:
+def _safe_http_error_details(
+    exc: urllib.error.HTTPError,
+    schema: dict[str, object],
+) -> tuple[str, str]:
     details = [f"Groq HTTP {exc.code}"]
     request_id = _safe_identifier(exc.headers.get("x-request-id", ""))
     if request_id:
@@ -121,6 +130,12 @@ def _safe_http_error_details(exc: urllib.error.HTTPError) -> tuple[str, str]:
                 details.append(f"{field}={value}")
                 if field == "code":
                     provider_code = value
+        failed_generation = error.get("failed_generation")
+        if failed_generation is None and isinstance(payload, dict):
+            failed_generation = payload.get("failed_generation")
+        mismatch = _safe_schema_mismatch(failed_generation, schema)
+        if mismatch:
+            details.append(f"schema_mismatch={mismatch}")
     return " ".join(details), provider_code
 
 
@@ -129,3 +144,53 @@ def _safe_identifier(value: object) -> str:
     return text if text and len(text) <= 100 and all(
         character.isalnum() or character in "._-" for character in text
     ) else ""
+
+
+def _safe_schema_mismatch(generation: object, schema: dict[str, object]) -> str:
+    try:
+        value = json.loads(generation) if isinstance(generation, str) else generation
+    except json.JSONDecodeError:
+        return "$:invalid_json"
+    return _first_schema_mismatch(value, schema, "$") if generation is not None else ""
+
+
+def _first_schema_mismatch(value: object, schema: object, path: str) -> str:
+    if not isinstance(schema, dict):
+        return ""
+    expected = schema.get("type")
+    type_matches = {
+        "object": isinstance(value, dict),
+        "array": isinstance(value, list),
+        "string": isinstance(value, str),
+        "boolean": isinstance(value, bool),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+    }
+    if expected in type_matches and not type_matches[expected]:
+        return f"{path}:type"
+    enum = schema.get("enum")
+    if isinstance(enum, list) and value not in enum:
+        return f"{path}:enum"
+    if isinstance(value, dict) and expected == "object":
+        properties = schema.get("properties")
+        properties = properties if isinstance(properties, dict) else {}
+        required = schema.get("required")
+        if isinstance(required, list):
+            for field in required:
+                if isinstance(field, str) and field not in value:
+                    return f"{path}.{field}:required"
+        if schema.get("additionalProperties") is False:
+            extra = next((field for field in value if field not in properties), "")
+            if extra:
+                return f"{path}.{extra}:additional_property"
+        for field, child in value.items():
+            if field in properties:
+                mismatch = _first_schema_mismatch(child, properties[field], f"{path}.{field}")
+                if mismatch:
+                    return mismatch
+    if isinstance(value, list) and expected == "array":
+        for index, item in enumerate(value):
+            mismatch = _first_schema_mismatch(item, schema.get("items"), f"{path}[{index}]")
+            if mismatch:
+                return mismatch
+    return ""
