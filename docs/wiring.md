@@ -16,3 +16,17 @@
 
 Do not connect power until every row has been visually traced on both ends.
 
+## INMP441 microphone (Phase 1 diagnostic)
+
+| INMP441 | ESP32-S3 | Note |
+|---|---|---|
+| VDD | 3V3 | Do not use 5 V |
+| GND | GND | Common ground |
+| L/R | GND | Selects the left I2S slot |
+| SCK / BCLK | GPIO4 | I2S bit clock from ESP32-S3 |
+| WS / LRCLK | GPIO5 | I2S word select from ESP32-S3 |
+| SD / DOUT | GPIO6 | I2S microphone data into ESP32-S3 |
+
+GPIO4/5/6 do not overlap the LCD, CH343 UART, native USB/JTAG, boot
+strapping pins, future servo reservation, or the N16R8 module's octal-memory
+connections. Power off the board before changing microphone wiring.

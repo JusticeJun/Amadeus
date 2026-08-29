@@ -30,6 +30,7 @@ Thumbs.db
 pc_bridge/.venv/
 pc_bridge/.pytest_cache/
 pc_bridge/.env
+pc_bridge/captures/
 
 # Isolated Apple Music browser profile and CDP state
 pc_bridge/apple-music-profile/

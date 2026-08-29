@@ -4,7 +4,7 @@
 - Board: ESP32-S3 DevKitC-1
 - Upload/serial: CH343P UART USB-C `COM` port, 115200 baud
 - Display: ST7796, SPI, 320×480 portrait; touch is not used
-- Future microphone: INMP441 at 3.3 V; GPIO 4/5/6 reserved
+- Phase 1 microphone: INMP441 at 3.3 V; GPIO4 BCLK, GPIO5 WS, GPIO6 data
 - Future servos: two MG996R; GPIO 16/17 reserved and external power required
 
 Hardware capacities must be accepted only after upload and runtime diagnostics.
