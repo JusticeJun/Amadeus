@@ -4,6 +4,23 @@ This diagnostic validates only the physical INMP441-to-ESP32-S3 I2S path and
 PC WAV capture. It does not implement AEC, VAD, STT, wake-word detection, or
 conversation integration.
 
+## Phase 1 status
+
+Phase 1 hardware acceptance was completed on 2026-08-29 using the wiring in
+this document. A 15-second spoken capture produced:
+
+- `read_errors=0`
+- `overruns=0`
+- `nonzero=239909` of 240000 samples
+- `min=-8721`, `max=7360`
+- `clipped=0`
+
+The generated 16 kHz mono PCM16 WAV was manually reviewed. Speech was clear
+and intelligible with correct speed and pitch, and there were no audible
+dropouts, repeated segments, severe digital noise, or sample-format corruption.
+This result validates the Phase 1 raw-capture path only; it does not add or
+validate AEC, VAD, STT, wake-word detection, or production voice input.
+
 ## Audio format
 
 - INMP441 source: Philips I2S, signed 24-bit data in a 32-bit slot
@@ -49,7 +66,10 @@ $env:PLATFORMIO_SETTING_ENABLE_TELEMETRY='No'
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-s3-inmp441-capture
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-s3-inmp441-capture -t upload
 cd pc_bridge
-.\.venv\Scripts\python.exe tools\capture_inmp441.py --port COM3 --seconds 5
+.\.venv\Scripts\python.exe tools\capture_inmp441.py `
+  --port COM3 `
+  --seconds 15 `
+  --output captures\inmp441-voice-15s.wav
 ```
 
 Close every serial monitor and stop the normal PC bridge before running the
@@ -58,7 +78,7 @@ input, requests a bounded capture, reads the exact advertised PCM byte count,
 checks the firmware summary, and writes:
 
 ```text
-pc_bridge\captures\inmp441-YYYYMMDD-HHMMSS.wav
+pc_bridge\captures\inmp441-voice-15s.wav
 ```
 
 Use `--output <path>` to select an explicit WAV path. Captures are limited to
@@ -76,11 +96,12 @@ diagnostic input. This is an exact transport/data-path integrity check, not an
 amplitude threshold or a production silence detector: a functioning digital
 microphone produces some noise codes even in a quiet environment.
 
-A healthy five-second capture has all of the following properties:
+A healthy spoken capture has all of the following properties:
 
 - the utility completes without a timeout or protocol error;
 - `read_errors=0` and `overruns=0`;
-- the WAV is mono, PCM16, 16 kHz, and approximately five seconds long;
+- `nonzero` is greater than zero and agrees with the received PCM payload;
+- the WAV is mono PCM16 at 16 kHz and matches the requested duration;
 - silence has low-amplitude noise rather than a constant full-scale value;
 - speech is intelligible at normal playback volume;
 - the waveform is centered around zero, responds clearly to speech, and is
