@@ -1,0 +1,86 @@
+# INMP441 Phase 1 capture diagnostic
+
+This diagnostic validates only the physical INMP441-to-ESP32-S3 I2S path and
+PC WAV capture. It does not implement AEC, VAD, STT, wake-word detection, or
+conversation integration.
+
+## Audio format
+
+- INMP441 source: Philips I2S, signed 24-bit data in a 32-bit slot
+- Channel: left (`L/R` connected to GND)
+- Sample rate: 16 kHz; generated directly by the ESP32-S3 I2S clock
+- WAV output: mono signed PCM16 at 16 kHz
+
+The firmware receives each 32-bit slot, sign-extends the valid upper 24 bits,
+then discards the least-significant eight valid bits to produce PCM16. No
+sample-rate conversion or digital gain is applied.
+
+## Wiring
+
+Power the board off before wiring.
+
+| INMP441 | ESP32-S3 DevKitC-1 |
+|---|---|
+| VDD | 3V3 |
+| GND | GND |
+| L/R | GND |
+| SCK / BCLK | GPIO4 |
+| WS / LRCLK | GPIO5 |
+| SD / DOUT | GPIO6 |
+
+## Build, upload, and record
+
+From the repository root in PowerShell:
+
+```powershell
+$env:PLATFORMIO_SETTING_ENABLE_TELEMETRY='No'
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-s3-inmp441-capture
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-s3-inmp441-capture -t upload
+cd pc_bridge
+.\.venv\Scripts\python.exe tools\capture_inmp441.py --port COM3 --seconds 5
+```
+
+Close every serial monitor and stop the normal PC bridge before running the
+capture utility. Only one process can own COM3. The utility resets the UART
+input, requests a bounded capture, reads the exact advertised PCM byte count,
+checks the firmware summary, and writes:
+
+```text
+pc_bridge\captures\inmp441-YYYYMMDD-HHMMSS.wav
+```
+
+Use `--output <path>` to select an explicit WAV path. Captures are limited to
+1 through 30 seconds. The diagnostic UART runs at 921600 baud; the production
+firmware and JSON protocol remain at 115200 baud.
+
+## Observability and acceptance
+
+The firmware reports the selected pins, 16 kHz sample rate, 24-bit data in a
+32-bit left slot, requested and captured sample counts, PCM byte count, I2S
+read errors, DMA overruns, minimum/maximum PCM values, and clipped samples.
+
+A healthy five-second capture has all of the following properties:
+
+- the utility completes without a timeout or protocol error;
+- `read_errors=0` and `overruns=0`;
+- the WAV is mono, PCM16, 16 kHz, and approximately five seconds long;
+- silence has low-amplitude noise rather than a constant full-scale value;
+- speech is intelligible at normal playback volume;
+- the waveform is centered around zero, responds clearly to speech, and is
+  not continuously flat, rail-clipped, byte-swapped, or dominated by periodic
+  digital noise;
+- `min` and `max` normally have both negative and positive values, while
+  `clipped` remains zero or very small during ordinary speech.
+
+These checks require a physical microphone recording. A successful build or
+deterministic PC-side test does not establish that the microphone wiring,
+channel selection, or sample alignment works on hardware.
+
+After the Phase 1 recording, restore the normal firmware before running the PC
+bridge again:
+
+```powershell
+cd ..
+$env:PLATFORMIO_SETTING_ENABLE_TELEMETRY='No'
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-s3-n16r8-diagnostic -t upload
+```
