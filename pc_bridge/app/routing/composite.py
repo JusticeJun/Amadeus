@@ -31,3 +31,19 @@ class CapabilityFilterSemanticRouter:
         decision = self._base.route(request)
         matches = tuple(match for match in decision.matches if match.capability in self._allowed)
         return RouteDecision(matches, decision.planning_required, decision.planning_reason)
+
+
+class MatchPredicateFilterSemanticRouter:
+    """Keep probabilistic matches only when a capability-specific safety predicate agrees."""
+
+    def __init__(self, base: SemanticRouter, predicates) -> None:
+        self._base = base
+        self._predicates = predicates
+
+    def route(self, request: RoutingRequest) -> RouteDecision:
+        decision = self._base.route(request)
+        matches = tuple(
+            match for match in decision.matches
+            if (predicate := self._predicates.get(match.capability)) is None or predicate(request)
+        )
+        return RouteDecision(matches, decision.planning_required, decision.planning_reason)

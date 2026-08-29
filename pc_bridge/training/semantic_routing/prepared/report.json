@@ -2,7 +2,7 @@
   "seed": 1729,
   "splits": {
     "train": {
-      "rows": 10762,
+      "rows": 10849,
       "deduplicated": 255,
       "label_conflicts_excluded": 6,
       "near_duplicates_excluded": 23,
@@ -11,16 +11,18 @@
         "hwu64-2019-en": 2036,
         "clinc150-uci-full": 3260,
         "massive-1.1-ko-KR-composed": 180,
-        "amadeus-template-boundary-v2": 69
+        "amadeus-template-boundary-v2": 69,
+        "amadeus-reviewed-weather-boundary-v3": 36,
+        "amadeus-composed-weather-boundary-v3": 51
       },
       "capabilities": {
         "pc_control": 764,
         "music_control": 1714,
-        "weather": 965
+        "weather": 978
       },
-      "no_match": 7499,
+      "no_match": 7573,
       "multi_label": 180,
-      "hard_negative": 266,
+      "hard_negative": 340,
       "capability_pair_confusion": {
         "weather_music_control": 3,
         "weather_pc_control": 3,
@@ -33,7 +35,7 @@
       }
     },
     "validation": {
-      "rows": 2670,
+      "rows": 2714,
       "deduplicated": 16,
       "label_conflicts_excluded": 19,
       "near_duplicates_excluded": 2,
@@ -42,16 +44,18 @@
         "hwu64-2019-en": 457,
         "clinc150-uci-full": 937,
         "massive-1.1-ko-KR-composed": 45,
-        "amadeus-template-boundary-v2": 30
+        "amadeus-template-boundary-v2": 30,
+        "amadeus-reviewed-weather-boundary-v3": 20,
+        "amadeus-composed-weather-boundary-v3": 24
       },
       "capabilities": {
         "pc_control": 139,
         "music_control": 347,
-        "weather": 198
+        "weather": 205
       },
-      "no_match": 2031,
+      "no_match": 2068,
       "multi_label": 45,
-      "hard_negative": 85,
+      "hard_negative": 122,
       "capability_pair_confusion": {
         "weather_music_control": 3,
         "weather_pc_control": 3,
@@ -93,7 +97,7 @@
       "reason": "initial baseline retained but excluded wholesale after independent overlap audit"
     }
   },
-  "train_validation_overlap_excluded": 82,
+  "train_validation_overlap_excluded": 85,
   "train_validation_overlap": 0,
   "fit_external_test_overlap_excluded": 115,
   "holdout_exact_overlap_excluded": {

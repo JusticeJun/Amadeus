@@ -1,0 +1,23 @@
+{"id":"weather_boundary_positive_clothing_001","text":"바람막이만 걸치고 나가면 춥지 않을까?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","clothing_suitability"]}
+{"id":"weather_boundary_positive_clothing_002","text":"밤에는 니트가 필요할 만큼 쌀쌀하려나?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","clothing_suitability"]}
+{"id":"weather_boundary_positive_rain_001","text":"퇴근길에 비 맞지 않으려면 우산 챙겨야 해?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","rain_preparation"]}
+{"id":"weather_boundary_positive_rain_002","text":"오후에 소나기 대비를 해야 할까?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","rain_preparation"]}
+{"id":"weather_boundary_positive_drying_001","text":"옥상에 빨래를 내놓으면 오늘 안에 마르겠어?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","outdoor_drying"]}
+{"id":"weather_boundary_positive_drying_002","text":"이불을 밖에 널어 두기 좋은 날일까?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","outdoor_drying"]}
+{"id":"weather_boundary_positive_temperature_001","text":"출근 시간엔 손이 시릴 정도로 추울까?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","indirect_temperature"]}
+{"id":"weather_boundary_positive_temperature_002","text":"한낮에는 땀이 날 만큼 더우려나?","expected_tools":["weather"],"category":"implicit_positive","tags":["boundary_slice","indirect_temperature"]}
+{"id":"weather_boundary_negative_outdoor_001","text":"야외 테이블에서 점심 약속 잡아도 괜찮을까?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","ordinary_outdoor_activity"]}
+{"id":"weather_boundary_negative_outdoor_002","text":"오늘 밖에서 동료랑 회의해도 될까?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","ordinary_outdoor_activity"]}
+{"id":"weather_boundary_negative_outdoor_003","text":"공원에서 그림을 그려도 괜찮을지 고민이야","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","ordinary_outdoor_activity"]}
+{"id":"weather_boundary_negative_mood_001","text":"마음속 하늘이 잔뜩 흐린 느낌이야","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","weather_metaphor"]}
+{"id":"weather_boundary_negative_mood_002","text":"오늘따라 감정이 축축하게 가라앉네","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","weather_metaphor"]}
+{"id":"weather_boundary_negative_object_001","text":"우산 손잡이가 부러졌는데 고칠 수 있을까?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","weather_object"]}
+{"id":"weather_boundary_negative_object_002","text":"비라는 이름의 전시회가 열린대","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","weather_title"]}
+{"id":"weather_boundary_negative_pc_001","text":"노트북이 비에 젖은 뒤 화면이 깜빡여","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","pc_weather_vocabulary"]}
+{"id":"weather_boundary_negative_pc_002","text":"컴퓨터 배경에 눈 내리는 효과를 켜 줘","expected_tools":["pc_control"],"category":"hard_negative","tags":["boundary_slice","pc_weather_vocabulary"]}
+{"id":"weather_boundary_negative_music_001","text":"소나기라는 노래를 예전에 들었어","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","music_weather_vocabulary"]}
+{"id":"weather_boundary_negative_music_002","text":"날씨가 들어간 앨범 제목이 뭐였지?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","music_weather_vocabulary"]}
+{"id":"weather_boundary_negative_today_001","text":"오늘은 새로 산 책을 읽어 볼까 해","expected_tools":[],"category":"negative","tags":["boundary_slice","general_today"]}
+{"id":"weather_boundary_negative_today_002","text":"오늘 수업 끝나고 친구한테 전화해야지","expected_tools":[],"category":"negative","tags":["boundary_slice","general_today"]}
+{"id":"weather_boundary_negative_suitability_001","text":"광장에서 발표 연습해도 괜찮을까?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","unclear_activity_suitability"]}
+{"id":"weather_boundary_negative_suitability_002","text":"저녁에 밖에서 인터뷰를 진행해도 될까?","expected_tools":[],"category":"hard_negative","tags":["boundary_slice","unclear_activity_suitability"]}

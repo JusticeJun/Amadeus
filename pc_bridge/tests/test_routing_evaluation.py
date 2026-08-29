@@ -29,6 +29,7 @@ PC_CORPUS = CORPUS.with_name("pc_control.jsonl")
 CROSS_CORPUS = CORPUS.with_name("cross_capability.jsonl")
 MUSIC_CORPUS = CORPUS.with_name("music_control.jsonl")
 MUSIC_CROSS_CORPUS = CORPUS.with_name("music_cross_capability.jsonl")
+WEATHER_BOUNDARY_CORPUS = CORPUS.with_name("weather_decision_boundary.jsonl")
 
 
 def test_corpus_covers_semantic_boundary_categories() -> None:
@@ -266,6 +267,20 @@ def test_hybrid_router_improves_weather_recall_over_rule_fast_path() -> None:
     new_report = evaluate_routing(cases, lambda case: set(default_router.route(RoutingRequest(case.text)).required_capabilities), latency_iterations=1)
 
     assert new_report.tool_metrics["weather"].recall > old_report.tool_metrics["weather"].recall
+
+
+def test_weather_decision_boundary_corpus_is_separate_and_complete() -> None:
+    cases = load_corpus(WEATHER_BOUNDARY_CORPUS)
+    tags = {tag for case in cases for tag in case.tags}
+
+    assert len(cases) == 23
+    assert {
+        "clothing_suitability", "rain_preparation", "outdoor_drying",
+        "indirect_temperature", "ordinary_outdoor_activity", "weather_metaphor",
+        "weather_object", "weather_title", "pc_weather_vocabulary",
+        "music_weather_vocabulary", "general_today", "unclear_activity_suitability",
+    } <= tags
+    assert all("boundary_slice" in case.tags for case in cases)
 
 
 def test_music_corpora_cover_actions_hard_negatives_and_multilabel_cases() -> None:

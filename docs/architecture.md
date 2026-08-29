@@ -56,8 +56,10 @@ from concrete Tool classes.
 Training is offline and deterministic. The provenance-aware train/validation corpus and
 threshold selection are separate from the fixed evaluation corpus. Runtime loads a JSON
 artifact and performs inference only. The first artifact promotes only read-only weather
-fallback predictions; music and PC confidence remains evaluable but cannot cause a side
-effect through ML fallback. Low-confidence predictions become an empty RouteDecision.
+fallback predictions. A capability-specific evidence filter can reject reviewed semantic
+boundary conflicts after classification and before promotion without changing model
+confidence. Music and PC confidence remains evaluable but cannot cause a side effect
+through ML fallback. Low-confidence or rejected predictions become an empty RouteDecision.
 An optional future LLM semantic fallback may consume that no-match state, but LLM
 provider/model routing remains a separate responsibility.
 

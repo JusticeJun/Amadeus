@@ -40,9 +40,11 @@ avoid collisions such as `weather/query` versus `calendar/query`. External offic
 partitions are evaluated separately and never merged with the Amadeus holdout.
 
 The classifier still produces confidence for every capability. Runtime fallback promotion
-is separately controlled by the capability catalog: the first artifact enables ML fallback
-only for read-only weather. Side-effecting music and PC predictions remain measurable but
-cannot reach Tool execution until independent evidence supports a safe policy.
+is separately controlled by the capability catalog: only read-only weather is enabled.
+A narrow post-classification safety predicate rejects reviewed non-weather uses such as
+ordinary outdoor activity suitability, mood metaphors, media/title references, and device
+weather damage before promotion. Side-effecting music and PC predictions remain measurable
+but cannot reach Tool execution until independent evidence supports a safe policy.
 
 The checked-in hand-authored corpus is retained as `amadeus-hand-authored-baseline-v1`,
 but is quarantined wholesale from the final prepared corpus after an independent leakage
@@ -73,32 +75,33 @@ retrain, select thresholds on validation, then evaluate once on the independent 
 
 - Initial baseline: 5,402 train / 1,240 validation, using MASSIVE Korean plus 180/45
   MASSIVE-derived multi-label rows. Its production hybrid micro F1 is 0.898.
-- Augmented training: 10,762 rows: MASSIVE Korean 5,217, HWU64 English 2,036,
+- Boundary-augmented training: 10,849 rows: MASSIVE Korean 5,217, HWU64 English 2,036,
   CLINC150 English/OOS 3,260, MASSIVE-derived multi-label 180, and Amadeus boundary
-  generation 69. Public direct data is 97.7%; external-derived data is 1.7%; Amadeus
-  generated data is 0.6%; quarantined hand-authored data contributes 0%.
-- Augmented validation: 2,670 rows: MASSIVE 1,201, HWU64 457, CLINC150 937,
-  external-derived multi-label 45, and Amadeus-generated 30.
+  generation 156 (69 capability-confusion, 36 reviewed weather-boundary, and 51 composed
+  weather-boundary rows). Quarantined hand-authored data contributes 0%.
+- Boundary-augmented validation: 2,714 rows: MASSIVE 1,201, HWU64 457, CLINC150 937,
+  external-derived multi-label 45, and Amadeus-generated/reviewed 74.
 - Separate external test: 4,112 rows: MASSIVE 1,381, HWU64 406, and CLINC150 2,325.
-- Training labels: weather 965, music 1,714, PC 764, no-match 7,499, multi-label 180,
-  and explicit hard-negative 266. Each capability pair has three generated confusion
+- Training labels: weather 978, music 1,714, PC 764, no-match 7,573, multi-label 180,
+  and explicit hard-negative 340. Each capability pair has three generated confusion
   negatives; validation independently contains three per pair. Positive multi-label
   coverage is balanced at 60 train / 15 validation examples for each of weather+music,
   weather+PC, and music+PC.
 - Quality exclusions: train 255 normalized duplicates, 6 conflicting-label rows, and 23
   near duplicates; validation 16/19/2; external test 35/0/5. Eighty-two train/validation
-  and 115 fit/external-test collisions were excluded. Three train/Amadeus-holdout exact
+  collisions were excluded before boundary augmentation and 85 after it; 115
+  fit/external-test collisions were excluded. Three train/Amadeus-holdout exact
   collisions were excluded. Final exact/normalized overlap is zero. Audit-only character
   trigram Jaccard found zero near overlaps at 0.85 (maximum train 0.80, validation 0.7143).
 - Quarantined initial baseline: 55 train and 24 validation rows; retained for audit only.
 - Production artifact remains 1,920,650 bytes with deterministic SHA-256
   `6d76206c0020b3175ecd4cba2a2735787674afaf9c23b22f169a02049d592b50`.
-- The augmented research artifact is 1,865,171 bytes with SHA-256
-  `e4ec1c330d8380006be4d19a89e4d8c76712227980e26256258a7a39b37fc265` and thresholds
-  weather 0.31, music 0.66, PC 0.87.
-- Amadeus holdout comparison: standalone ML improves from micro F1 0.639 to 0.646,
-  while baseline hybrid micro F1 0.898 becomes 0.896 with the research artifact;
-  augmented is therefore not promoted. Separate external-test standalone ML improves
-  from micro P/R/F1 0.916/0.444/0.598 and exact 0.897 to 0.901/0.861/0.880 and exact
-  0.960. This demonstrates broader multilingual/OOS recall but not an improvement on the
-  primary Amadeus distribution. Both results are retained rather than selecting on holdout.
+- The boundary-augmented research artifact is 1,864,038 bytes with SHA-256
+  `9ea571ce3f75ab9d417e04100d75bb273b293c921c4f2fa18145134758b8d30c` and thresholds
+  weather 0.33, music 0.65, PC 0.85. Two independent retraining runs produced the same hash.
+- On the untouched Amadeus holdout, the production hybrid changes from micro F1 0.8982
+  before the runtime boundary fix to 0.8995 after it. The updated research hybrid reaches
+  0.9024, but production v1 remains selected because the holdout was not used for model
+  promotion. Separate external-test standalone ML changes from micro P/R/F1
+  0.901/0.861/0.880 and exact 0.960 to 0.905/0.858/0.881 and exact 0.960. The production
+  v1 standalone baseline remains 0.916/0.444/0.598 and exact 0.897.
