@@ -1,0 +1,10 @@
+{"id":"music_cross_weather_001","text":"오늘 날씨 알려주고 제이팝 플레이리스트 틀어줘","expected_tools":["weather","music_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"music_cross_pc_001","text":"볼륨 30으로 하고 마리골드 틀어줘","expected_tools":["pc_control","music_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"music_cross_all_001","text":"날씨 알려주고 볼륨 줄이고 제이팝 플레이리스트 틀어줘","expected_tools":["weather","pc_control","music_control"],"category":"mixed_intent","tags":["independent_tools"]}
+{"id":"music_cross_negative_001","text":"비 오는 날 제이팝 들으면 분위기 좋더라","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"music_cross_negative_002","text":"마리골드 들을 때 볼륨 어느 정도가 좋아?","expected_tools":[],"category":"hard_negative","tags":["cross_capability"]}
+{"id":"music_cross_music_only_001","text":"날씨는 됐고 아이묭 대표곡 틀어줘","expected_tools":["music_control"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"music_cross_weather_only_001","text":"음악은 됐고 오늘 비 오는지만 알려줘","expected_tools":["weather"],"category":"mixed_intent","tags":["negated_capability"]}
+{"id":"music_cross_planning_001","text":"비 오면 제이팝 플레이리스트 틀어줘","expected_tools":["weather","music_control"],"category":"planning_required","tags":["conditional_dependency"]}
+{"id":"music_cross_planning_002","text":"밖에 추우면 음악 일시정지해줘","expected_tools":["weather","music_control"],"category":"planning_required","tags":["conditional_dependency"]}
+{"id":"music_cross_planning_003","text":"기온이 30도 넘으면 다음 곡 틀어줘","expected_tools":["weather","music_control"],"category":"planning_required","tags":["conditional_dependency"]}

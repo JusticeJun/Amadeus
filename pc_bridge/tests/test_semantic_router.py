@@ -145,6 +145,81 @@ def test_default_router_supports_independent_multilabel_requests() -> None:
     assert not decision.planning_required
 
 
+@pytest.mark.parametrize(("text", "expected"), [
+    ("오늘 날씨 알려주고 제이팝 플레이리스트 틀어줘", {"weather", "music_control"}),
+    ("볼륨 30으로 하고 마리골드 틀어줘", {"pc_control", "music_control"}),
+    (
+        "날씨 알려주고 볼륨 줄이고 제이팝 플레이리스트 틀어줘",
+        {"weather", "pc_control", "music_control"},
+    ),
+])
+def test_default_router_supports_music_multilabel_requests(text, expected) -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(text))
+
+    assert decision.required_capabilities == expected
+    assert not decision.planning_required
+
+
+@pytest.mark.parametrize("text", [
+    "지금 무슨 노래야?",
+    "일시정지해줘",
+    "일시정지 좀 해줘",
+    "다시 재생해줘",
+    "다음 곡",
+    "이전 곡",
+])
+def test_default_router_routes_supported_music_transport_actions(text) -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(text))
+
+    assert decision.required_capabilities == {"music_control"}
+
+
+@pytest.mark.parametrize("text", [
+    "백넘버의 수평선 재생해줄래?",
+    "백넘버 수평선 틀어줘",
+    "백넘버가 부른 수평선 틀어줘",
+    "수평선이라는 노래 틀어줘",
+])
+def test_default_router_routes_representative_song_request_forms(text) -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(text))
+
+    assert decision.required_capabilities == {"music_control"}
+
+
+@pytest.mark.parametrize("text", [
+    "아이묭 마리골드 틀어",
+    "백넘버 노래 들려",
+    "재즈 음악 재생해",
+])
+def test_default_router_routes_music_imperatives(text) -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(text))
+
+    assert decision.required_capabilities == {"music_control"}
+
+
+def test_default_router_routes_implicit_current_heat_regression() -> None:
+    decision = create_default_semantic_router(_routing_apps()).route(RoutingRequest(
+        "오늘도 밖에 많이 덥나? 요즘 개덥던데 진짜로",
+    ))
+
+    assert decision.required_capabilities == {"weather"}
+
+
+def test_conditional_music_request_preserves_capabilities_and_blocks_side_effect() -> None:
+    weather = StubTool("weather")
+    music = StubTool("music_control")
+    decision = create_default_semantic_router(_routing_apps()).route(
+        RoutingRequest("비 오면 제이팝 플레이리스트 틀어줘")
+    )
+
+    executions = ToolExecutor([weather, music]).execute(decision, "조건부 음악 요청")
+
+    assert decision.required_capabilities == {"weather", "music_control"}
+    assert decision.planning_required
+    assert executions == ()
+    assert not weather.calls and not music.calls
+
+
 def test_conditional_multitool_request_is_preserved_but_not_executed() -> None:
     weather = StubTool("weather")
     pc_control = StubTool("pc_control")

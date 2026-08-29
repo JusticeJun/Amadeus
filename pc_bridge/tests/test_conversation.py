@@ -3,9 +3,12 @@ from pathlib import Path
 from app.conversation import ConversationManager
 from app.llm import LlmClient
 from app.models import LlmResult
-from app.routing import RuleBasedSemanticRouter
+from app.music_control import MusicSemanticInterpreter, RuleBasedMusicActionParser
+from app.pc_control import default_app_registry
+from app.routing import RuleBasedSemanticRouter, create_default_semantic_router
+from app.semantic_llm import SemanticLlmError
 from app.tts import TtsEngine
-from app.tools import ToolExecutor
+from app.tools import MusicControlTool, ToolExecutor
 from app.tools.base import ToolResult
 
 
@@ -57,6 +60,16 @@ class RepeatingLlm(LlmClient):
         return LlmResult(reply=self.reply)
 
 
+class RepliesLlm(LlmClient):
+    def __init__(self, replies: list[str]) -> None:
+        self.replies = iter(replies)
+        self.histories = []
+
+    def complete(self, user_text, history):
+        self.histories.append(history)
+        return LlmResult(reply=next(self.replies))
+
+
 class StubWeatherTool:
     name = "weather"
 
@@ -86,6 +99,36 @@ class FailedSideEffectTool:
 
     def build_llm_context(self, result: ToolResult) -> str:
         return "검증된 실행 결과: 요청한 조작은 실행되지 않았다."
+
+
+class AmbiguousSideEffectTool(FailedSideEffectTool):
+    name = "music_control"
+
+    def run(self, user_text: str) -> ToolResult:
+        return ToolResult("music_control", False, {"reason": "ambiguous"}, "ambiguous")
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        return "같은 제목의 곡이 여러 개라 재생하지 않았다. 어느 가수인지 물어본다."
+
+
+class PartialMusicTool(FailedSideEffectTool):
+    name = "music_control"
+
+    def run(self, user_text: str) -> ToolResult:
+        return ToolResult("music_control", False, {
+            "status": "partial_failure",
+            "actions": [
+                {"type": "pause", "status": "success"},
+                {"type": "play_song", "status": "failed", "reason": "no_match"},
+            ],
+            "reason": "no_match",
+        }, "no matching song")
+
+    def build_llm_context(self, result: ToolResult) -> str:
+        return (
+            "검증된 순차 실행 결과: pause는 success, play_song은 failed다. "
+            "성공과 실패를 구분하고 실행되지 않은 재생을 약속하지 않는다."
+        )
 
 
 class CapturingTts(TtsEngine):
@@ -228,6 +271,101 @@ def test_failed_side_effect_cannot_be_reported_as_success() -> None:
     assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
 
 
+def test_unrouted_side_effect_cannot_be_reported_as_success() -> None:
+    llm = RepeatingLlm("잠깐 정지했어.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["일시정지 좀 해줘", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert any(
+        "검증된 실제 조작 성공 결과가 없다" in item.content
+        for item in llm.histories[-1]
+    )
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
+def test_unrouted_relative_volume_followup_cannot_claim_success() -> None:
+    llm = RepeatingLlm("볼륨을 조금 낮췄어.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["조금만 다시 내려줘", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
+def test_music_semantic_failure_cannot_imply_an_unverified_followup() -> None:
+    class FailedSemanticClient:
+        def complete(self, request):
+            raise SemanticLlmError("provider_error", "Groq HTTP 400")
+
+    class MustNotExecuteController:
+        def execute(self, action):
+            raise AssertionError("failed interpretation must not execute")
+
+    llm = RepeatingLlm("음, 그럼 다른 곡으로 바꿔볼까?")
+    tts = CapturingTts()
+    interpreter = MusicSemanticInterpreter(
+        RuleBasedMusicActionParser(), FailedSemanticClient(),
+    )
+    manager = ConversationManager(
+        SequenceInput(["아이묭 마리골드 틀어", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=create_default_semantic_router(
+            default_app_registry(), interpreter,
+        ),
+        tool_executor=ToolExecutor([
+            MusicControlTool(interpreter, MustNotExecuteController()),
+        ]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert any(
+        "실제 조작은 실패했고 변경된 것은 없다" in item.content
+        for item in llm.histories[-1]
+    )
+    assert tts.results[0].reply == "그 요청은 실행되지 않았어. 아직은 제대로 처리할 수 없어."
+
+
+def test_ambiguous_side_effect_allows_truthful_clarification() -> None:
+    llm = RepeatingLlm("수평선이라는 곡이 여러 개 있어. 어느 가수 노래를 말하는 거야?")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["수평선 틀어줘", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({"music_control": lambda request: True}),
+        tool_executor=ToolExecutor([AmbiguousSideEffectTool()]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 1
+    assert tts.results[0].reply == "수평선이라는 곡이 여러 개 있어. 어느 가수 노래를 말하는 거야?"
+
+
 def test_planning_reply_cannot_claim_success_or_offer_unrelated_advice() -> None:
     llm = RepeatingLlm("볼륨을 줄일 수는 없지만, 시원한 음료 한잔 어때?")
     tts = CapturingTts()
@@ -249,3 +387,83 @@ def test_planning_reply_cannot_claim_success_or_offer_unrelated_advice() -> None
 
     assert len(llm.histories) == 2
     assert tts.results[0].reply == "그렇게 조건을 걸어서 조작하는 건 아직 못 해."
+
+
+def test_partial_music_result_reports_success_and_failure_without_future_claim() -> None:
+    llm = RepliesLlm([
+        "지금 노래는 정지했어. 이제 크리스마스송을 재생할게!",
+        "지금 노래는 일시정지했는데, 크리스마스송은 재생하지 못했어.",
+    ])
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput([
+            "지금 재생중인 노래 일시정지하고 백넘버의 크리스마스송 틀어줘",
+            "/quit",
+        ]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({"music_control": lambda request: True}),
+        tool_executor=ToolExecutor([PartialMusicTool()]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert tts.results[0].reply == (
+        "지금 노래는 일시정지했는데, 크리스마스송은 재생하지 못했어."
+    )
+
+
+def test_current_weather_claim_without_verified_source_is_blocked() -> None:
+    llm = RepeatingLlm("오늘 밖은 진짜 덥고 기온이 35도야.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["오늘도 밖에 많이 덥나?", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 2
+    assert tts.results[0].reply == "지금 날씨는 실제로 확인하지 못했어."
+
+
+def test_current_weather_claim_with_verified_weather_result_is_allowed() -> None:
+    llm = RepeatingLlm("오늘 밖은 27도고 비는 안 와.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["오늘 밖에 덥나?", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+        semantic_router=RuleBasedSemanticRouter({"weather": lambda request: True}),
+        tool_executor=ToolExecutor([StubWeatherTool()]),
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 1
+    assert tts.results[0].reply == "오늘 밖은 27도고 비는 안 와."
+
+
+def test_live_data_guard_does_not_block_ordinary_today_conversation() -> None:
+    llm = RepeatingLlm("오늘은 코딩 공부 얘기나 더 해보자.")
+    tts = CapturingTts()
+    manager = ConversationManager(
+        SequenceInput(["오늘 뭐 할까?", "/quit"]),
+        llm,
+        tts,
+        CapturingSerial(),
+        neutral_hold_seconds=0,
+    )
+
+    manager.run()
+
+    assert len(llm.histories) == 1
+    assert tts.results[0].reply == "오늘은 코딩 공부 얘기나 더 해보자."

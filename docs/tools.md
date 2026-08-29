@@ -62,3 +62,25 @@ Independent requests such as `오늘 날씨 알려주고 크롬 켜줘` may exec
 tools. Conditional requests such as `비 오면 크롬 켜줘` retain both capabilities
 in `RouteDecision`, but are marked `planning_required` and execute nothing until
 a dependency-aware planner is implemented.
+
+## Apple Music PWA tool
+
+`music_control` separates minimal rule-based action extraction from the
+production `MusicAction` and `AppleMusicPwaController` layers. Its backend uses
+only the dedicated Amadeus Chrome profile through a localhost CDP endpoint; it
+does not inspect or copy the user's normal Chrome profile.
+
+Song and playlist candidates must match normalized names and available
+title/artist metadata uniquely. The controller verifies now-playing metadata
+after side effects, caches playlist discovery, and may return a marked partial
+or stale playlist snapshot when a full refresh is unavailable. Existing generic
+OS media actions are retained for compatibility, while music utterances prefer
+`music_control` to avoid duplicate playback side effects.
+
+Music interpretation uses deterministic transport and status commands as a fast
+path. Entity-heavy, contextual, or conversational requests may use a strict
+structured semantic LLM fallback. That component can only produce bounded
+`MusicActionSequence` values and search alternatives; Apple Music catalog and
+playlist IDs, candidate selection, playback, and success remain controlled and
+verified by the deterministic resolver/controller layers. Provider failure or
+invalid structured output does not authorize a side effect.

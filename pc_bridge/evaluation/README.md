@@ -23,6 +23,50 @@ Use `--json` for machine-readable output or `--fail-on-mismatch` when a future r
 
 This is a holdout evaluation asset, not classifier training data. Future training and validation data must be maintained separately to avoid measuring a model on examples it learned from.
 
+## Music structured interpretation evaluation
+
+Music-internal interpretation is measured separately from capability routing:
+
+```bash
+python tools/evaluate_music_interpretation.py
+```
+
+The prediction boundary includes the current Music routing decision and the
+Music action parser, but never calls a controller or playback backend. Each
+case labels one of four outcomes: `parsed`, `ambiguous`, `unsupported`, or
+`rejected`. Parsed cases contain an ordered list of actions using the production
+action enum and the `title`, `artist`, and `playlist` arguments.
+
+The corpus is split into:
+
+- `development.jsonl`: public examples for evaluator tests and future prompt or
+  rule development.
+- `holdout.jsonl`: the fixed comparison set for Rule, LLM-assisted, and future
+  Local-ML-plus-LLM systems. Do not tune rules, prompts, or thresholds against
+  individual holdout sentences. Add newly discovered field failures without
+  rewriting older cases to improve a score.
+
+Metrics have deliberately separate meanings:
+
+- action accuracy: position-aligned action-type accuracy across expected parsed
+  requests, with missing and extra actions penalized;
+- entity accuracy: normalized exact match for applicable title, artist, and
+  playlist slots;
+- full structured-request accuracy: outcome, ordered actions, and every entity
+  must all match;
+- action-sequence exact accuracy: outcome and the ordered action types match;
+- ambiguity and context-dependent accuracy: exact success on those slices;
+- alternate-query coverage: each explicitly required canonical query is
+  present after NFKC, case, and whitespace normalization;
+- alternate-query boundedness: no more than four non-empty, normalized-unique
+  alternatives per predicted action.
+
+Entity normalization permits only Unicode NFKC, case folding, and whitespace
+removal. The evaluator does not translate names or invent aliases. Alternate
+queries never improve primary action/entity accuracy, and generating more
+queries does not increase coverage beyond satisfying an explicitly labeled
+requirement.
+
 ## Label policy
 
 - Label a capability as required when answering correctly needs current or future external data, or when an external action must be performed.

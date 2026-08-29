@@ -9,9 +9,9 @@
 {"id":"pc_explicit_009","text":"볼륨 100으로 설정해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["volume_absolute","boundary"]}
 {"id":"pc_explicit_010","text":"음소거해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["mute"]}
 {"id":"pc_explicit_011","text":"음소거 풀어줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["unmute"]}
-{"id":"pc_explicit_012","text":"음악 일시정지해줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["media"]}
-{"id":"pc_explicit_013","text":"다음 곡","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
-{"id":"pc_explicit_014","text":"이전 노래로 넘겨줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
+{"id":"pc_explicit_012","text":"음악 일시정지해줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["media","capability_migration"]}
+{"id":"pc_explicit_013","text":"다음 곡","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
+{"id":"pc_explicit_014","text":"이전 노래로 넘겨줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
 {"id":"pc_hard_negative_001","text":"크롬이랑 엣지 중 뭐가 좋아?","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
 {"id":"pc_hard_negative_002","text":"이 노래 볼륨이 작은 이유가 뭐야?","expected_tools":[],"category":"hard_negative","tags":["volume"]}
 {"id":"pc_hard_negative_003","text":"요즘 크롬이 너무 느린 것 같아.","expected_tools":[],"category":"hard_negative","tags":["launch_app"]}
@@ -50,17 +50,17 @@
 {"id":"pc_mute_minimal_001","text":"음소거 기능은 왜 있는 거야?","expected_tools":[],"category":"minimal_pair","tags":["mute","hard_negative","minimal_pair"]}
 {"id":"pc_mute_negative_001","text":"회의할 때 음소거하는 게 예의지?","expected_tools":[],"category":"hard_negative","tags":["mute"]}
 {"id":"pc_mute_negative_002","text":"음소거 표시가 계속 떠 있어","expected_tools":[],"category":"hard_negative","tags":["mute"]}
-{"id":"pc_media_positive_001","text":"다음 곡으로 넘겨줘","expected_tools":["pc_control"],"category":"explicit_positive","tags":["media"]}
-{"id":"pc_media_positive_002","text":"한 곡 넘겨줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
-{"id":"pc_media_positive_003","text":"아까 노래로 돌아가줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
-{"id":"pc_media_positive_004","text":"재생 잠깐 멈춰줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial"]}
-{"id":"pc_media_positive_005","text":"노래 다시 틀어줘","expected_tools":["pc_control"],"category":"implicit_positive","tags":["media","colloquial","play_pause_toggle","execution_best_effort"]}
+{"id":"pc_media_positive_001","text":"다음 곡으로 넘겨줘","expected_tools":["music_control"],"category":"explicit_positive","tags":["media","capability_migration"]}
+{"id":"pc_media_positive_002","text":"한 곡 넘겨줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
+{"id":"pc_media_positive_003","text":"아까 노래로 돌아가줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
+{"id":"pc_media_positive_004","text":"재생 잠깐 멈춰줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
+{"id":"pc_media_positive_005","text":"노래 다시 틀어줘","expected_tools":["music_control"],"category":"implicit_positive","tags":["media","colloquial","capability_migration"]}
 {"id":"pc_media_minimal_001","text":"다음 곡은 뭐야?","expected_tools":[],"category":"minimal_pair","tags":["media","hard_negative","minimal_pair"]}
 {"id":"pc_media_minimal_002","text":"이전 곡 제목 알려줘","expected_tools":[],"category":"minimal_pair","tags":["media","hard_negative","minimal_pair"]}
 {"id":"pc_media_negative_001","text":"다음 곡이 더 좋아","expected_tools":[],"category":"hard_negative","tags":["media"]}
 {"id":"pc_media_negative_002","text":"이 노래를 멈추면 분위기가 깨질까?","expected_tools":[],"category":"hard_negative","tags":["media"]}
 {"id":"pc_media_negative_003","text":"재생 버튼은 왜 삼각형이야?","expected_tools":[],"category":"hard_negative","tags":["media"]}
-{"id":"pc_context_001","text":"잠깐 멈춰","expected_tools":["pc_control"],"category":"context_required","tags":["media"],"context":[{"role":"user","content":"지금 음악 재생 중이야."}]}
+{"id":"pc_context_001","text":"잠깐 멈춰","expected_tools":["music_control"],"category":"context_required","tags":["media","capability_migration"],"context":[{"role":"user","content":"지금 음악 재생 중이야."}]}
 {"id":"pc_context_002","text":"그거 좀 키워줘","expected_tools":["pc_control"],"category":"context_required","tags":["volume_relative"],"context":[{"role":"user","content":"컴퓨터 소리가 너무 작네."}]}
 {"id":"pc_ambiguous_001","text":"그거 켜줘","expected_tools":null,"category":"ambiguous","tags":["missing_target"]}
 {"id":"pc_ambiguous_002","text":"좀 줄여줘","expected_tools":null,"category":"ambiguous","tags":["missing_target"]}

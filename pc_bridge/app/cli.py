@@ -6,12 +6,18 @@ from .config import Settings
 from .conversation import ConversationManager
 from .input_provider import TextInputProvider
 from .llm import GroqLlmClient, LlmError, MockLlmClient
+from .groq_semantic import GroqSemanticLlmClient
+from .music_control import (
+    AppleMusicPwaController, CdpAppleMusicBackend, MusicSemanticInterpreter,
+    RuleBasedMusicActionParser,
+)
 from .pc_control import RuleBasedPcActionParser, default_app_registry
 from .pc_control.windows import WindowsPcController
 from .routing import create_default_semantic_router
+from .semantic_llm import SemanticLlmError
 from .serial_bridge import SerialBridge
 from .tts import TtsError, create_tts_engine
-from .tools import KmaWeatherTool, PcControlTool, ToolExecutor
+from .tools import KmaWeatherTool, MusicControlTool, PcControlTool, ToolExecutor
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,6 +47,15 @@ def main() -> int:
         print(f"[config] {exc}")
         return 2
     apps = default_app_registry()
+    semantic_client = None
+    if settings.mode != "mock" and settings.music_semantic_llm_enabled:
+        try:
+            semantic_client = GroqSemanticLlmClient(settings)
+        except SemanticLlmError as exc:
+            print(f"[semantic] Music semantic provider unavailable: {exc}")
+    music_interpreter = MusicSemanticInterpreter(
+        RuleBasedMusicActionParser(), semantic_client,
+    )
     tools = [KmaWeatherTool(
         settings.kma_service_key,
         settings.amadeus_location_name,
@@ -50,8 +65,20 @@ def main() -> int:
     ), PcControlTool(
         RuleBasedPcActionParser(apps),
         WindowsPcController(apps),
+    ), MusicControlTool(
+        music_interpreter,
+        AppleMusicPwaController(
+            CdpAppleMusicBackend(
+                port=settings.apple_music_cdp_port,
+                timeout_seconds=settings.apple_music_timeout_seconds,
+                chrome_path=settings.apple_music_chrome_path,
+                profile_dir=settings.apple_music_profile_dir,
+            ),
+            playlist_cache_seconds=settings.apple_music_playlist_cache_seconds,
+            candidate_semantics=music_interpreter,
+        ),
     )]
-    semantic_router = create_default_semantic_router(apps)
+    semantic_router = create_default_semantic_router(apps, music_interpreter)
     with SerialBridge(settings.serial_enabled, settings.serial_port, settings.serial_baud) as bridge:
         ConversationManager(
             TextInputProvider(), llm, tts, bridge,

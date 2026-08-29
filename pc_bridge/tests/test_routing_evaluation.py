@@ -26,6 +26,8 @@ from evaluation import (
 CORPUS = Path(__file__).resolve().parents[1] / "evaluation" / "cases" / "weather.jsonl"
 PC_CORPUS = CORPUS.with_name("pc_control.jsonl")
 CROSS_CORPUS = CORPUS.with_name("cross_capability.jsonl")
+MUSIC_CORPUS = CORPUS.with_name("music_control.jsonl")
+MUSIC_CROSS_CORPUS = CORPUS.with_name("music_cross_capability.jsonl")
 
 
 def test_corpus_covers_semantic_boundary_categories() -> None:
@@ -144,7 +146,7 @@ def test_rule_router_preserves_weather_evaluation_baseline() -> None:
 
     report = evaluate_routing(load_corpus(CORPUS), predict, latency_iterations=1)
     weather = report.tool_metrics["weather"]
-    assert (weather.true_positive, weather.false_positive, weather.false_negative) == (28, 8, 26)
+    assert (weather.true_positive, weather.false_positive, weather.false_negative) == (29, 8, 26)
 
 
 def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
@@ -176,10 +178,14 @@ def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
     cross_report = evaluate_routing(load_corpus(CROSS_CORPUS), predict, latency_iterations=1)
 
     pc = pc_report.tool_metrics["pc_control"]
-    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (48, 0, 2)
+    music = pc_report.tool_metrics["music_control"]
+    assert (pc.true_positive, pc.false_positive, pc.false_negative) == (40, 0, 1)
+    assert (music.true_positive, music.false_positive, music.false_negative) == (9, 0, 0)
     cross_pc = cross_report.tool_metrics["pc_control"]
+    cross_music = cross_report.tool_metrics["music_control"]
     cross_weather = cross_report.tool_metrics["weather"]
-    assert (cross_pc.true_positive, cross_pc.false_positive, cross_pc.false_negative) == (22, 0, 0)
+    assert (cross_pc.true_positive, cross_pc.false_positive, cross_pc.false_negative) == (19, 0, 0)
+    assert (cross_music.true_positive, cross_music.false_positive, cross_music.false_negative) == (3, 0, 0)
     assert (
         cross_weather.true_positive,
         cross_weather.false_positive,
@@ -190,7 +196,7 @@ def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
 def test_all_planning_cases_preserve_capabilities_and_block_execution() -> None:
     router = create_default_semantic_router(default_app_registry())
     cases = [
-        case for case in load_corpus(CROSS_CORPUS)
+        case for case in load_corpora((CROSS_CORPUS, MUSIC_CROSS_CORPUS))
         if case.category == "planning_required"
     ]
     decisions = []
@@ -198,11 +204,11 @@ def test_all_planning_cases_preserve_capabilities_and_block_execution() -> None:
         history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
         decisions.append(router.route(RoutingRequest(case.text, history)))
 
-    assert len(cases) == 7
+    assert len(cases) == 10
     assert all(decision.planning_required for decision in decisions)
     assert all(
-        decision.required_capabilities == {"weather", "pc_control"}
-        for decision in decisions
+        decision.required_capabilities == case.expected_tools
+        for case, decision in zip(cases, decisions)
     )
     class MustNotRunTool:
         name = "pc_control"
@@ -213,7 +219,10 @@ def test_all_planning_cases_preserve_capabilities_and_block_execution() -> None:
         def build_llm_context(self, result):
             raise AssertionError("planning-required result should not exist")
 
-    executor = ToolExecutor((MustNotRunTool(),))
+    class MustNotRunMusicTool(MustNotRunTool):
+        name = "music_control"
+
+    executor = ToolExecutor((MustNotRunTool(), MustNotRunMusicTool()))
     assert all(executor.execute(decision, case.text) == () for case, decision in zip(
         cases, decisions,
     ))
@@ -244,7 +253,7 @@ def test_corpus_preserves_paths_natural_urls_and_toggle_semantics() -> None:
     assert cases["pc_security_005"].text == r"계산기 실행한 다음 del C:\temp\data.txt 해줘"
     assert cases["pc_security_006"].text == "크롬 켜고 example.com도 열어줘"
     assert not any("](" in case.text for case in cases.values())
-    assert "execution_best_effort" in cases["pc_media_positive_005"].tags
+    assert "capability_migration" in cases["pc_media_positive_005"].tags
 
 
 def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:
@@ -257,3 +266,19 @@ def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:
         old_weather = "weather" in old_router.route(request).required_capabilities
         new_weather = "weather" in default_router.route(request).required_capabilities
         assert new_weather == old_weather, case.case_id
+
+
+def test_music_corpora_cover_actions_hard_negatives_and_multilabel_cases() -> None:
+    music = load_corpus(MUSIC_CORPUS)
+    cross = load_corpus(MUSIC_CROSS_CORPUS)
+
+    assert {"explicit_positive", "hard_negative", "minimal_pair", "ambiguous"} <= {
+        case.category for case in music
+    }
+    assert any("playlist_track" in case.tags for case in music)
+    assert any(case.expected_tools == {"weather", "music_control"} for case in cross)
+    assert any(
+        case.expected_tools == {"weather", "pc_control", "music_control"}
+        for case in cross
+    )
+    assert sum(case.category == "planning_required" for case in cross) == 3

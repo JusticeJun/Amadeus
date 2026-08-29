@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from ..models import ChatMessage
 from ..routing import RouteDecision
 from .base import Tool, ToolExecution, ToolResult
 
@@ -22,7 +23,12 @@ class ToolExecutor:
                 raise ValueError(f"duplicate tool capability: {tool.name}")
             self._tools[tool.name] = tool
 
-    def execute(self, decision: RouteDecision, user_text: str) -> tuple[ToolExecution, ...]:
+    def execute(
+        self,
+        decision: RouteDecision,
+        user_text: str,
+        history: tuple[ChatMessage, ...] = (),
+    ) -> tuple[ToolExecution, ...]:
         if decision.planning_required:
             return ()
         executions: list[ToolExecution] = []
@@ -38,7 +44,8 @@ class ToolExecutor:
                 executions.append(ToolExecution(result, _UNAVAILABLE_CONTEXT))
                 continue
             try:
-                result = tool.run(user_text)
+                contextual_run = getattr(tool, "run_with_context", None)
+                result = contextual_run(user_text, history) if contextual_run else tool.run(user_text)
                 context = tool.build_llm_context(result)
             except Exception as exc:  # Keep one capability from terminating the turn.
                 result = ToolResult(
@@ -54,3 +61,20 @@ class ToolExecutor:
                 side_effecting=bool(getattr(tool, "side_effecting", False)),
             ))
         return tuple(executions)
+
+    def continue_clarification(
+        self, capability: str, pending: dict[str, object], user_text: str,
+        history: tuple[ChatMessage, ...] = (),
+    ) -> ToolExecution | None:
+        """Attempt one bounded, capability-owned clarification continuation."""
+        tool = self._tools.get(capability)
+        continuation = getattr(tool, "continue_clarification", None) if tool else None
+        if continuation is None:
+            return None
+        result = continuation(pending, user_text, history)
+        if result is None:
+            return None
+        return ToolExecution(
+            result, tool.build_llm_context(result),
+            side_effecting=bool(getattr(tool, "side_effecting", False)),
+        )
