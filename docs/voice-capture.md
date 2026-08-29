@@ -15,11 +15,11 @@ The firmware receives each 32-bit slot, sign-extends the valid upper 24 bits,
 then discards the least-significant eight valid bits to produce PCM16. No
 sample-rate conversion or digital gain is applied.
 
-The diagnostic keeps I2S stopped while it waits for a command and while PCM
-is sent to the PC. At capture start it resets the legacy driver's RX buffer
-queue and starts DMA; it stops DMA immediately after reading the requested
-samples. `overruns` therefore counts RX DMA buffers actually discarded during
-the active capture, not overflow events accumulated while idle.
+The diagnostic installs and starts a fresh I2S driver immediately before each
+capture, then stops and uninstalls it before PCM is sent to the PC. The RX queue
+therefore exists only during active capture. `overruns` counts RX DMA buffers
+actually discarded during that interval, not overflow events accumulated
+while idle.
 
 Mono PCM16 at 16 kHz is 32,000 bytes/s. The I2S driver reads the microphone's
 32-bit slots at 64,000 bytes/s, while 921600-baud UART with 8N1 framing has a
@@ -70,6 +70,11 @@ firmware and JSON protocol remain at 115200 baud.
 The firmware reports the selected pins, 16 kHz sample rate, 24-bit data in a
 32-bit left slot, requested and captured sample counts, PCM byte count, I2S
 read errors, DMA overruns, minimum/maximum PCM values, and clipped samples.
+It also reports the number of samples that are not exactly zero. The PC checks
+that count against the received PCM and rejects an all-zero capture as a dead
+diagnostic input. This is an exact transport/data-path integrity check, not an
+amplitude threshold or a production silence detector: a functioning digital
+microphone produces some noise codes even in a quiet environment.
 
 A healthy five-second capture has all of the following properties:
 

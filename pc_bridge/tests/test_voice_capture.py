@@ -19,7 +19,7 @@ def test_capture_protocol_writes_standard_pcm16_wav(tmp_path: Path) -> None:
     )
     pcm = struct.pack("<hhhh", -32768, -10, 10, 32767)
     summary = parse_audio_end(
-        "AUDIO_END samples=4 bytes=8 read_errors=0 overruns=0 "
+        "AUDIO_END samples=4 bytes=8 read_errors=0 overruns=0 nonzero=4 "
         "min=-32768 max=32767 clipped=2",
     )
 
@@ -57,13 +57,13 @@ def test_capture_protocol_rejects_transport_or_i2s_errors() -> None:
         validate_capture(
             frame,
             b"\0\0",
-            CaptureSummary(2, 4, 0, 0, 0, 0, 0),
+            CaptureSummary(2, 4, 0, 0, 2, 0, 0, 0),
         )
     with pytest.raises(ValueError, match="read_errors=1, overruns=2"):
         validate_capture(
             frame,
             b"\0\0\0\0",
-            CaptureSummary(2, 4, 1, 2, 0, 0, 0),
+            CaptureSummary(2, 4, 1, 2, 2, 0, 0, 0),
         )
 
 
@@ -76,5 +76,31 @@ def test_capture_protocol_rejects_dma_sample_loss_when_reads_succeed() -> None:
         validate_capture(
             frame,
             b"\0\0\0\0",
-            CaptureSummary(2, 4, 0, 5, -10, 10, 0),
+            CaptureSummary(2, 4, 0, 5, 2, -10, 10, 0),
+        )
+
+
+def test_capture_protocol_rejects_exactly_zero_dead_input() -> None:
+    frame = parse_audio_begin(
+        "AUDIO_BEGIN rate=16000 channels=1 bits=16 samples=2 bytes=4",
+    )
+
+    with pytest.raises(ValueError, match="dead input: all PCM samples are zero"):
+        validate_capture(
+            frame,
+            b"\0\0\0\0",
+            CaptureSummary(2, 4, 0, 0, 0, 0, 0, 0),
+        )
+
+
+def test_capture_protocol_verifies_nonzero_count_against_pcm() -> None:
+    frame = parse_audio_begin(
+        "AUDIO_BEGIN rate=16000 channels=1 bits=16 samples=2 bytes=4",
+    )
+
+    with pytest.raises(ValueError, match="firmware=2, pcm=1"):
+        validate_capture(
+            frame,
+            b"\1\0\0\0",
+            CaptureSummary(2, 4, 0, 0, 2, 0, 1, 0),
         )

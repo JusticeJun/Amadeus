@@ -25,6 +25,7 @@ size_t commandLength = 0;
 struct CaptureStats {
   uint32_t readErrors = 0;
   uint32_t overruns = 0;
+  uint32_t nonzero = 0;
   int16_t minimum = std::numeric_limits<int16_t>::max();
   int16_t maximum = std::numeric_limits<int16_t>::min();
   uint32_t clipped = 0;
@@ -59,7 +60,7 @@ constexpr int16_t pcm16FromInmp441(int32_t slotSample) {
 static_assert(pcm16FromInmp441(0x7FFF0000) == 32767);
 static_assert(pcm16FromInmp441(static_cast<int32_t>(0x80000000U)) == -32768);
 
-bool initializeI2s() {
+bool installI2s() {
   const i2s_config_t config = {
       .mode = static_cast<i2s_mode_t>(I2S_MODE_MASTER | I2S_MODE_RX),
       .sample_rate = kSampleRate,
@@ -94,40 +95,22 @@ bool initializeI2s() {
     i2s_driver_uninstall(kI2sPort);
     return false;
   }
-  result = i2s_zero_dma_buffer(kI2sPort);
-  if (result != ESP_OK) {
-    printError("i2s_zero_dma_buffer", result);
-    i2s_driver_uninstall(kI2sPort);
-    return false;
-  }
-  result = i2s_stop(kI2sPort);
-  if (result != ESP_OK) {
-    printError("i2s_stop", result);
-    i2s_driver_uninstall(kI2sPort);
-    return false;
-  }
   return true;
 }
 
-bool startCapture() {
-  CaptureStats idleStats;
-  drainI2sEvents(idleStats);
-  esp_err_t result = i2s_zero_dma_buffer(kI2sPort);
+void stopAndUninstallI2s(CaptureStats& stats) {
+  esp_err_t result = i2s_stop(kI2sPort);
   if (result != ESP_OK) {
-    printError("i2s_zero_dma_buffer", result);
-    return false;
+    ++stats.readErrors;
+    printError("i2s_stop", result);
   }
-
-  // Re-applying the clock while stopped resets the legacy driver's internal
-  // RX buffer queue before it starts DMA. Idle overflows therefore cannot be
-  // attributed to the requested capture.
-  result = i2s_set_clk(kI2sPort, kSampleRate, I2S_BITS_PER_SAMPLE_32BIT,
-                       I2S_CHANNEL_MONO);
+  drainI2sEvents(stats);
+  result = i2s_driver_uninstall(kI2sPort);
   if (result != ESP_OK) {
-    printError("i2s_set_clk", result);
-    return false;
+    ++stats.readErrors;
+    printError("i2s_driver_uninstall", result);
   }
-  return true;
+  i2sEvents = nullptr;
 }
 
 void capture(uint32_t seconds) {
@@ -145,7 +128,7 @@ void capture(uint32_t seconds) {
                 static_cast<unsigned>(seconds),
                 static_cast<unsigned>(requestedSamples));
   CaptureStats stats;
-  if (!startCapture()) {
+  if (!installI2s()) {
     heap_caps_free(pcm);
     Serial.println("AUDIO_ERROR capture_start_failed");
     return;
@@ -160,9 +143,15 @@ void capture(uint32_t seconds) {
     const esp_err_t result = i2s_read(kI2sPort, raw,
                                      requestSamples * sizeof(int32_t),
                                      &bytesRead, pdMS_TO_TICKS(1000));
-    if (result != ESP_OK || bytesRead == 0) {
+    const size_t requestedBytes = requestSamples * sizeof(int32_t);
+    if (result != ESP_OK || bytesRead != requestedBytes ||
+        bytesRead % sizeof(int32_t) != 0) {
       ++stats.readErrors;
-      printError("i2s_read", result);
+      Serial.printf(
+          "[voice] i2s_read failed: %s (%d) requested_bytes=%u bytes_read=%u\n",
+          esp_err_to_name(result), static_cast<int>(result),
+          static_cast<unsigned>(requestedBytes),
+          static_cast<unsigned>(bytesRead));
       break;
     }
 
@@ -170,6 +159,9 @@ void capture(uint32_t seconds) {
     for (size_t index = 0; index < samplesRead; ++index) {
       const int16_t sample = pcm16FromInmp441(raw[index]);
       pcm[capturedSamples++] = sample;
+      if (sample != 0) {
+        ++stats.nonzero;
+      }
       stats.minimum = std::min(stats.minimum, sample);
       stats.maximum = std::max(stats.maximum, sample);
       if (sample == std::numeric_limits<int16_t>::min() ||
@@ -180,12 +172,7 @@ void capture(uint32_t seconds) {
     drainI2sEvents(stats);
   }
 
-  const esp_err_t stopResult = i2s_stop(kI2sPort);
-  if (stopResult != ESP_OK) {
-    ++stats.readErrors;
-    printError("i2s_stop", stopResult);
-  }
-  drainI2sEvents(stats);
+  stopAndUninstallI2s(stats);
 
   if (capturedSamples == 0) {
     stats.minimum = 0;
@@ -198,9 +185,10 @@ void capture(uint32_t seconds) {
       static_cast<unsigned>(capturedSamples), static_cast<unsigned>(pcmBytes));
   Serial.write(reinterpret_cast<const uint8_t*>(pcm), pcmBytes);
   Serial.printf(
-      "\nAUDIO_END samples=%u bytes=%u read_errors=%u overruns=%u min=%d max=%d clipped=%u\n",
+      "\nAUDIO_END samples=%u bytes=%u read_errors=%u overruns=%u nonzero=%u min=%d max=%d clipped=%u\n",
       static_cast<unsigned>(capturedSamples), static_cast<unsigned>(pcmBytes),
       static_cast<unsigned>(stats.readErrors), static_cast<unsigned>(stats.overruns),
+      static_cast<unsigned>(stats.nonzero),
       static_cast<int>(stats.minimum), static_cast<int>(stats.maximum),
       static_cast<unsigned>(stats.clipped));
   Serial.flush();
@@ -232,7 +220,14 @@ void setup() {
     Serial.println("AUDIO_ERROR psram_not_found");
     return;
   }
-  if (!initializeI2s()) {
+  if (!installI2s()) {
+    Serial.println("AUDIO_ERROR i2s_initialization_failed");
+    return;
+  }
+  const esp_err_t uninstallResult = i2s_driver_uninstall(kI2sPort);
+  i2sEvents = nullptr;
+  if (uninstallResult != ESP_OK) {
+    printError("i2s_driver_uninstall", uninstallResult);
     Serial.println("AUDIO_ERROR i2s_initialization_failed");
     return;
   }

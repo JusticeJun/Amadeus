@@ -20,6 +20,7 @@ class CaptureSummary:
     byte_count: int
     read_errors: int
     overruns: int
+    nonzero: int
     minimum: int
     maximum: int
     clipped: int
@@ -56,13 +57,15 @@ def parse_audio_begin(line: str) -> AudioFrame:
 def parse_audio_end(line: str) -> CaptureSummary:
     fields = _parse_fields(line, "AUDIO_END")
     required = {
-        "samples", "bytes", "read_errors", "overruns", "min", "max", "clipped",
+        "samples", "bytes", "read_errors", "overruns", "nonzero", "min", "max",
+        "clipped",
     }
     if fields.keys() != required:
         raise ValueError(f"unexpected AUDIO_END fields: {sorted(fields)}")
     return CaptureSummary(
         fields["samples"], fields["bytes"], fields["read_errors"],
-        fields["overruns"], fields["min"], fields["max"], fields["clipped"],
+        fields["overruns"], fields["nonzero"], fields["min"], fields["max"],
+        fields["clipped"],
     )
 
 
@@ -76,6 +79,17 @@ def validate_capture(frame: AudioFrame, pcm: bytes, summary: CaptureSummary) -> 
             f"firmware reported read_errors={summary.read_errors}, "
             f"overruns={summary.overruns}",
         )
+    actual_nonzero = sum(
+        pcm[offset:offset + 2] != b"\0\0"
+        for offset in range(0, len(pcm), 2)
+    )
+    if summary.nonzero != actual_nonzero:
+        raise ValueError(
+            f"nonzero sample mismatch: firmware={summary.nonzero}, "
+            f"pcm={actual_nonzero}",
+        )
+    if frame.samples > 0 and actual_nonzero == 0:
+        raise ValueError("firmware reported dead input: all PCM samples are zero")
 
 
 def write_wav(path: Path, frame: AudioFrame, pcm: bytes) -> None:
