@@ -2,39 +2,90 @@
   "seed": 1729,
   "splits": {
     "train": {
-      "rows": 5402,
-      "deduplicated": 239,
-      "label_conflicts_excluded": 4,
+      "rows": 10762,
+      "deduplicated": 255,
+      "label_conflicts_excluded": 6,
+      "near_duplicates_excluded": 23,
       "sources": {
-        "massive-1.1-ko-KR": 5222,
-        "massive-1.1-ko-KR-composed": 180
+        "massive-1.1-ko-KR": 5217,
+        "hwu64-2019-en": 2036,
+        "clinc150-uci-full": 3260,
+        "massive-1.1-ko-KR-composed": 180,
+        "amadeus-template-boundary-v2": 69
       },
       "capabilities": {
-        "pc_control": 369,
-        "music_control": 890,
-        "weather": 645
+        "pc_control": 764,
+        "music_control": 1714,
+        "weather": 965
       },
-      "no_match": 3678,
-      "multi_label": 180
+      "no_match": 7499,
+      "multi_label": 180,
+      "hard_negative": 266,
+      "capability_pair_confusion": {
+        "weather_music_control": 3,
+        "weather_pc_control": 3,
+        "music_control_pc_control": 3
+      },
+      "multilabel_pairs": {
+        "music_control+pc_control": 60,
+        "pc_control+weather": 60,
+        "music_control+weather": 60
+      }
     },
     "validation": {
-      "rows": 1240,
+      "rows": 2670,
       "deduplicated": 16,
-      "label_conflicts_excluded": 0,
+      "label_conflicts_excluded": 19,
+      "near_duplicates_excluded": 2,
       "sources": {
-        "massive-1.1-ko-KR": 1195,
-        "massive-1.1-ko-KR-composed": 45
+        "massive-1.1-ko-KR": 1201,
+        "hwu64-2019-en": 457,
+        "clinc150-uci-full": 937,
+        "massive-1.1-ko-KR-composed": 45,
+        "amadeus-template-boundary-v2": 30
       },
       "capabilities": {
-        "pc_control": 57,
-        "music_control": 171,
-        "weather": 129
+        "pc_control": 139,
+        "music_control": 347,
+        "weather": 198
       },
-      "no_match": 928,
-      "multi_label": 45
+      "no_match": 2031,
+      "multi_label": 45,
+      "hard_negative": 85,
+      "capability_pair_confusion": {
+        "weather_music_control": 3,
+        "weather_pc_control": 3,
+        "music_control_pc_control": 3
+      },
+      "multilabel_pairs": {
+        "music_control+pc_control": 15,
+        "pc_control+weather": 15,
+        "music_control+weather": 15
+      }
+    },
+    "external_test": {
+      "rows": 4112,
+      "deduplicated": 35,
+      "label_conflicts_excluded": 0,
+      "near_duplicates_excluded": 5,
+      "sources": {
+        "massive-1.1-ko-KR": 1381,
+        "hwu64-2019-en": 406,
+        "clinc150-uci-full": 2325
+      },
+      "capabilities": {
+        "pc_control": 114,
+        "music_control": 394,
+        "weather": 202
+      },
+      "no_match": 3402,
+      "multi_label": 0,
+      "hard_negative": 88,
+      "capability_pair_confusion": {},
+      "multilabel_pairs": {}
     }
   },
-  "source_manifest_sha256": "d96eae760728bd036a04d0074657879c4e97327fddd45e77d60d4c11d20d4095",
+  "source_manifest_sha256": "59ad5c7adad43902e02f996bf5d0208ef4fd77bd9ca7a13cbdab0b79a7e31963",
   "quarantined_sources": {
     "amadeus-hand-authored-baseline-v1": {
       "train_rows": 55,
@@ -42,8 +93,9 @@
       "reason": "initial baseline retained but excluded wholesale after independent overlap audit"
     }
   },
-  "train_validation_overlap_excluded": 84,
+  "train_validation_overlap_excluded": 82,
   "train_validation_overlap": 0,
+  "fit_external_test_overlap_excluded": 115,
   "holdout_exact_overlap_excluded": {
     "train": 3,
     "validation": 0

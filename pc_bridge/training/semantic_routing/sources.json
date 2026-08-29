@@ -19,6 +19,49 @@
         "audio_volume_other": ["pc_control"]
       },
       "unmapped_policy": "sample-as-no-match"
+    },
+    "hwu64-2019-en": {
+      "name": "NLU Evaluation Data / HWU64",
+      "url": "https://raw.githubusercontent.com/xliuhw/NLU-Evaluation-Data/master/AnnotatedData/NLU-Data-Home-Domain-Annotated-All.csv",
+      "sha256": "5f6dbf6d38fc111217924945ac59c554e0b926d5aa836ecdd0d089d2ca48e1d9",
+      "license": "CC-BY-4.0",
+      "citation": "Liu et al., Benchmarking NLU Services for Building Conversational Agents, 2019",
+      "usage": "mapped-multilingual-supplement",
+      "relationship": "English SLURP-family source; semantically related to MASSIVE, not an independent corpus",
+      "intent_mapping": {
+        "weather/query": ["weather"],
+        "play/music": ["music_control"],
+        "music/query": ["music_control"],
+        "audio/volume_up": ["pc_control"],
+        "audio/volume_down": ["pc_control"],
+        "audio/volume_mute": ["pc_control"],
+        "audio/volume_other": ["pc_control"]
+      },
+      "unmapped_policy": "sample-as-no-match"
+    },
+    "clinc150-uci-full": {
+      "name": "CLINC150 full",
+      "url": "https://archive.ics.uci.edu/static/public/570/clinc150.zip",
+      "archive_sha256": "0d8ecc3e1edd7b25cabde0177544ce536ddf773844bc80ef1a75f36e7f030ea2",
+      "member": "clinc150_uci/data_full.json",
+      "member_sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0",
+      "license": "CC-BY-4.0",
+      "citation": "Larson et al., An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction, 2019",
+      "usage": "mapped-and-oos-supplement",
+      "intent_mapping": {
+        "weather": ["weather"],
+        "play_music": ["music_control"],
+        "next_song": ["music_control"],
+        "what_song": ["music_control"],
+        "update_playlist": ["music_control"],
+        "change_volume": ["pc_control"]
+      },
+      "hard_negative_intents": [
+        "definition", "smart_home", "current_location", "change_accent",
+        "change_speed", "reset_settings", "calendar", "calendar_update",
+        "recipe", "traffic", "what_can_i_ask_you"
+      ],
+      "unmapped_policy": "balanced-no-match"
     }
   }
 }

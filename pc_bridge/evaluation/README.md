@@ -26,6 +26,8 @@ hybrid on the same fixed corpus:
 python tools/evaluate_semantic_routing.py --router rule
 python tools/evaluate_semantic_routing.py --router ml
 python tools/evaluate_semantic_routing.py --router hybrid
+python tools/evaluate_semantic_routing.py --router ml-research
+python tools/evaluate_semantic_routing.py --router hybrid-research
 ```
 
 The report includes per-capability and micro/macro precision, recall, and F1 plus

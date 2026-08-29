@@ -23,15 +23,45 @@ def texts(paths: list[Path]) -> set[str]:
     return result
 
 
+def trigrams(text: str) -> frozenset[str]:
+    value = normalize(text)
+    return frozenset(value[index:index + 3] for index in range(max(0, len(value) - 2)))
+
+
+def near_overlap(left: set[str], right: set[str], threshold: float = 0.85) -> tuple[int, float]:
+    right_features = [(value, trigrams(value)) for value in right]
+    matches = 0
+    maximum = 0.0
+    for value in left:
+        features = trigrams(value)
+        if not features:
+            continue
+        for other, other_features in right_features:
+            if not other_features or min(len(value), len(other)) / max(len(value), len(other)) < 0.65:
+                continue
+            score = len(features & other_features) / len(features | other_features)
+            maximum = max(maximum, score)
+            matches += score >= threshold
+    return matches, maximum
+
+
 def main() -> int:
     prepared = BRIDGE_ROOT / "training" / "semantic_routing" / "prepared"
     evaluation = BRIDGE_ROOT / "evaluation" / "cases"
     train = texts([prepared / "train.jsonl"])
     validation = texts([prepared / "validation.jsonl"])
     holdout = texts(sorted(evaluation.glob("*.jsonl")))
+    train_near, train_max = near_overlap(train, holdout)
+    validation_near, validation_max = near_overlap(validation, holdout)
     report = {
         "train_holdout_normalized_overlap": len(train & holdout),
         "validation_holdout_normalized_overlap": len(validation & holdout),
+        "near_duplicate_metric": "character-trigram Jaccard >= 0.85; audit-only",
+        "train_holdout_near_overlap": train_near,
+        "validation_holdout_near_overlap": validation_near,
+        "train_holdout_max_similarity": round(train_max, 4),
+        "validation_holdout_max_similarity": round(validation_max, 4),
+        "semantic_leakage_assurance": "provenance/process separation; no embedding-based semantic claim",
         "policy": "report-only; holdout text must not drive data generation, model selection, or thresholds",
     }
     print(json.dumps(report, indent=2))

@@ -31,7 +31,10 @@ def character_ngrams(text: str, minimum: int, maximum: int) -> Counter[str]:
 
 
 DATA_DIR = BRIDGE_ROOT / "training" / "semantic_routing"
-DEFAULT_OUTPUT = BRIDGE_ROOT / "app" / "routing" / "artifacts" / "semantic-router-v1.json"
+DEFAULT_OUTPUT = (
+    BRIDGE_ROOT / "app" / "routing" / "artifacts"
+    / "semantic-router-v2-external-research.json"
+)
 SEED = 1729
 
 

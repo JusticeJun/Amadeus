@@ -32,17 +32,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--fail-on-mismatch", action="store_true")
-    parser.add_argument("--router", choices=("hybrid", "rule", "ml"), default="hybrid")
+    parser.add_argument(
+        "--router",
+        choices=("hybrid", "rule", "ml", "hybrid-research", "ml-research"),
+        default="hybrid",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     apps = default_app_registry()
+    research_model = DEFAULT_MODEL_PATH.with_name("semantic-router-v2-external-research.json")
     router = {
         "hybrid": lambda: create_default_semantic_router(apps),
         "rule": lambda: create_rule_based_semantic_router(apps),
         "ml": lambda: LocalMlSemanticRouter(DEFAULT_MODEL_PATH),
+        "hybrid-research": lambda: create_default_semantic_router(apps, model_path=research_model),
+        "ml-research": lambda: LocalMlSemanticRouter(research_model),
     }[args.router]()
 
     def predict(case: RoutingCase) -> set[str]:

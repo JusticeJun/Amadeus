@@ -72,10 +72,22 @@ def test_prepared_dataset_has_provenance_and_disjoint_splits() -> None:
 def test_external_mapping_is_explicit_and_uses_capability_vocabulary() -> None:
     path = Path(__file__).resolve().parents[1] / "training" / "semantic_routing" / "sources.json"
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    mapping = manifest["sources"]["massive-1.1-ko-KR"]["intent_mapping"]
+    assert set(manifest["sources"]) == {
+        "massive-1.1-ko-KR", "hwu64-2019-en", "clinc150-uci-full",
+    }
+    for source in manifest["sources"].values():
+        mapping = source["intent_mapping"]
+        assert mapping
+        assert all(set(labels) <= set(CAPABILITY_NAMES) for labels in mapping.values())
 
-    assert mapping
-    assert all(set(labels) <= set(CAPABILITY_NAMES) for labels in mapping.values())
+
+def test_production_and_research_artifacts_are_explicitly_separate() -> None:
+    research = DEFAULT_MODEL_PATH.with_name("semantic-router-v2-external-research.json")
+
+    assert DEFAULT_MODEL_PATH.name == "semantic-router-v1.json"
+    assert research.exists()
+    assert LocalMlSemanticRouter(DEFAULT_MODEL_PATH)
+    assert LocalMlSemanticRouter(research)
 
 
 def test_versioned_model_predicts_multilabel_and_no_match_validation_cases() -> None:
