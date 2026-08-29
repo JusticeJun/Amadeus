@@ -11,6 +11,7 @@ from app.routing import (
     RoutingRequest,
     RuleBasedSemanticRouter,
     create_default_semantic_router,
+    create_rule_based_semantic_router,
     matches_weather_request,
 )
 from app.tools import ToolExecutor
@@ -168,7 +169,7 @@ def test_pc_and_cross_corpora_cover_multicapability_boundaries() -> None:
 
 
 def test_expanded_corpora_preserve_current_rule_router_baseline() -> None:
-    router = create_default_semantic_router(default_app_registry())
+    router = create_rule_based_semantic_router(default_app_registry())
 
     def predict(case: RoutingCase) -> set[str]:
         history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
@@ -256,16 +257,15 @@ def test_corpus_preserves_paths_natural_urls_and_toggle_semantics() -> None:
     assert "capability_migration" in cases["pc_media_positive_005"].tags
 
 
-def test_weather_matcher_predictions_are_unchanged_by_default_router() -> None:
+def test_hybrid_router_improves_weather_recall_over_rule_fast_path() -> None:
     apps = default_app_registry()
     default_router = create_default_semantic_router(apps)
-    old_router = RuleBasedSemanticRouter({"weather": matches_weather_request})
+    old_router = create_rule_based_semantic_router(apps)
+    cases = load_corpus(CORPUS)
+    old_report = evaluate_routing(cases, lambda case: set(old_router.route(RoutingRequest(case.text)).required_capabilities), latency_iterations=1)
+    new_report = evaluate_routing(cases, lambda case: set(default_router.route(RoutingRequest(case.text)).required_capabilities), latency_iterations=1)
 
-    for case in load_corpus(CORPUS):
-        request = RoutingRequest(case.text)
-        old_weather = "weather" in old_router.route(request).required_capabilities
-        new_weather = "weather" in default_router.route(request).required_capabilities
-        assert new_weather == old_weather, case.case_id
+    assert new_report.tool_metrics["weather"].recall > old_report.tool_metrics["weather"].recall
 
 
 def test_music_corpora_cover_actions_hard_negatives_and_multilabel_cases() -> None:

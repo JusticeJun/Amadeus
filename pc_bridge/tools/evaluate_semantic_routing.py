@@ -13,7 +13,13 @@ sys.path.insert(0, str(BRIDGE_ROOT))
 
 from app.models import ChatMessage  # noqa: E402
 from app.pc_control import default_app_registry  # noqa: E402
-from app.routing import RoutingRequest, create_default_semantic_router  # noqa: E402
+from app.routing import (  # noqa: E402
+    LocalMlSemanticRouter,
+    RoutingRequest,
+    create_default_semantic_router,
+    create_rule_based_semantic_router,
+)
+from app.routing.defaults import DEFAULT_MODEL_PATH  # noqa: E402
 from evaluation import RoutingCase, evaluate_routing, load_corpora  # noqa: E402
 
 
@@ -26,12 +32,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--iterations", type=int, default=100)
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--fail-on-mismatch", action="store_true")
+    parser.add_argument("--router", choices=("hybrid", "rule", "ml"), default="hybrid")
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
-    router = create_default_semantic_router(default_app_registry())
+    apps = default_app_registry()
+    router = {
+        "hybrid": lambda: create_default_semantic_router(apps),
+        "rule": lambda: create_rule_based_semantic_router(apps),
+        "ml": lambda: LocalMlSemanticRouter(DEFAULT_MODEL_PATH),
+    }[args.router]()
 
     def predict(case: RoutingCase) -> set[str]:
         history = tuple(ChatMessage(turn.role, turn.content) for turn in case.context)
@@ -53,6 +65,14 @@ def main() -> int:
 
 def _print_report(report) -> None:
     print(f"scored={report.scored_cases} ambiguous={report.ambiguous_cases}")
+    print(
+        f"micro: precision={report.micro_metrics.precision:.3f} "
+        f"recall={report.micro_metrics.recall:.3f} f1={report.micro_metrics.f1:.3f}"
+    )
+    print(
+        f"macro: precision={report.macro_precision:.3f} "
+        f"recall={report.macro_recall:.3f} f1={report.macro_f1:.3f}"
+    )
     for tool, metrics in report.tool_metrics.items():
         print(
             f"{tool}: precision={metrics.precision:.3f} recall={metrics.recall:.3f} "

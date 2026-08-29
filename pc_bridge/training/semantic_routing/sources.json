@@ -1,0 +1,24 @@
+{
+  "sources": {
+    "massive-1.1-ko-KR": {
+      "name": "MASSIVE 1.1 Korean",
+      "url": "https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz",
+      "archive_sha256": "4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577",
+      "member": "1.1/data/ko-KR.jsonl",
+      "member_sha256": "3f44944978e95b1b3c083a6b378fc15ddcee996ef3371f1ca10635c772b93037",
+      "license": "CC-BY-4.0",
+      "citation": "FitzGerald et al., MASSIVE, 2022",
+      "usage": "mapped-and-balanced",
+      "intent_mapping": {
+        "weather_query": ["weather"],
+        "play_music": ["music_control"],
+        "music_query": ["music_control"],
+        "audio_volume_up": ["pc_control"],
+        "audio_volume_down": ["pc_control"],
+        "audio_volume_mute": ["pc_control"],
+        "audio_volume_other": ["pc_control"]
+      },
+      "unmapped_policy": "sample-as-no-match"
+    }
+  }
+}

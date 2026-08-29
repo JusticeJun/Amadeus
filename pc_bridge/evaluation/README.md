@@ -19,6 +19,20 @@ Run the current rule-based Weather matcher against the corpus:
 python tools/evaluate_semantic_routing.py
 ```
 
+Compare the unchanged rule baseline, the standalone local model, and the production
+hybrid on the same fixed corpus:
+
+```bash
+python tools/evaluate_semantic_routing.py --router rule
+python tools/evaluate_semantic_routing.py --router ml
+python tools/evaluate_semantic_routing.py --router hybrid
+```
+
+The report includes per-capability and micro/macro precision, recall, and F1 plus
+human-readable false positives and false negatives. Dataset preparation and threshold
+selection must not use these cases. `tools/check_semantic_dataset_leakage.py` performs
+only the final normalized exact-overlap audit.
+
 Use `--json` for machine-readable output or `--fail-on-mismatch` when a future routing implementation is expected to satisfy the full scored corpus.
 
 This is a holdout evaluation asset, not classifier training data. Future training and validation data must be maintained separately to avoid measuring a model on examples it learned from.

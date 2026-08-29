@@ -1,0 +1,51 @@
+{
+  "seed": 1729,
+  "splits": {
+    "train": {
+      "rows": 5402,
+      "deduplicated": 239,
+      "label_conflicts_excluded": 4,
+      "sources": {
+        "massive-1.1-ko-KR": 5222,
+        "massive-1.1-ko-KR-composed": 180
+      },
+      "capabilities": {
+        "pc_control": 369,
+        "music_control": 890,
+        "weather": 645
+      },
+      "no_match": 3678,
+      "multi_label": 180
+    },
+    "validation": {
+      "rows": 1240,
+      "deduplicated": 16,
+      "label_conflicts_excluded": 0,
+      "sources": {
+        "massive-1.1-ko-KR": 1195,
+        "massive-1.1-ko-KR-composed": 45
+      },
+      "capabilities": {
+        "pc_control": 57,
+        "music_control": 171,
+        "weather": 129
+      },
+      "no_match": 928,
+      "multi_label": 45
+    }
+  },
+  "source_manifest_sha256": "d96eae760728bd036a04d0074657879c4e97327fddd45e77d60d4c11d20d4095",
+  "quarantined_sources": {
+    "amadeus-hand-authored-baseline-v1": {
+      "train_rows": 55,
+      "validation_rows": 24,
+      "reason": "initial baseline retained but excluded wholesale after independent overlap audit"
+    }
+  },
+  "train_validation_overlap_excluded": 84,
+  "train_validation_overlap": 0,
+  "holdout_exact_overlap_excluded": {
+    "train": 3,
+    "validation": 0
+  }
+}

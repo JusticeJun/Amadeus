@@ -44,6 +44,23 @@ Semantic Understanding은 자연어를 검증 가능한 structured intent/action
 
 Semantic interpretation은 실행과 분리한다. LLM이나 classifier는 사용자의 의도를 해석할 수 있지만 외부 action의 성공 여부를 결정하지 않는다.
 
+### Local ML semantic routing
+
+Production routing preserves the stable `RoutingRequest -> RouteDecision -> ToolExecutor`
+boundary. A deterministic rule router handles narrow, verified fast paths and conditional
+planning guards. When it returns no match, a versioned local character n-gram TF-IDF,
+one-vs-rest logistic model produces multi-label capability probabilities. Capability
+definitions, side-effect risk, and ML-fallback eligibility are maintained independently
+from concrete Tool classes.
+
+Training is offline and deterministic. The provenance-aware train/validation corpus and
+threshold selection are separate from the fixed evaluation corpus. Runtime loads a JSON
+artifact and performs inference only. The first artifact promotes only read-only weather
+fallback predictions; music and PC confidence remains evaluable but cannot cause a side
+effect through ML fallback. Low-confidence predictions become an empty RouteDecision.
+An optional future LLM semantic fallback may consume that no-match state, but LLM
+provider/model routing remains a separate responsibility.
+
 ## LLM Routing
 
 LLM을 사용하는 계층은 특정 provider나 model에 직접 결합하지 않는다.

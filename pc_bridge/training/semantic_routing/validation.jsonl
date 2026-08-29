@@ -1,0 +1,25 @@
+{"text":"오늘 바깥 공기 차가워?","labels":["weather"]}
+{"text":"내일 비올 확률 좀 봐줘","labels":["weather"]}
+{"text":"이번주 부산 예보 부탁해","labels":["weather"]}
+{"text":"지금 체감 온도 몇 도야","labels":["weather"]}
+{"text":"노래 한 곡 틀어 줄래","labels":["music_control"]}
+{"text":"음악 잠깐 멈춰줘","labels":["music_control"]}
+{"text":"이전 트랙으로 돌아가","labels":["music_control"]}
+{"text":"지금 재생 중인 곡 알려줘","labels":["music_control"]}
+{"text":"크롬 좀 열어 줄 수 있어?","labels":["pc_control"]}
+{"text":"시스템 소리 작게","labels":["pc_control"]}
+{"text":"메모장 종료해줘","labels":["pc_control"]}
+{"text":"mute 해 줘","labels":["pc_control"]}
+{"text":"오늘 비 와? 그리고 재즈 틀어줘","labels":["weather","music_control"]}
+{"text":"기온 확인하고 컴퓨터 볼륨 낮춰","labels":["weather","pc_control"]}
+{"text":"브라우저 켜고 음악 재생해","labels":["pc_control","music_control"]}
+{"text":"좋은 아침이야","labels":[]}
+{"text":"날씨가 사람 기분에 미치는 영향은?","labels":[]}
+{"text":"좋은 음악의 기준이 뭘까","labels":[]}
+{"text":"크롬 사용법을 설명해줘","labels":[]}
+{"text":"캘린더에 약속 추가해줘","labels":[]}
+{"text":"환율 확인해줘","labels":[]}
+{"text":"그거 해줘","labels":[]}
+{"text":"볼륨이라는 말은 무슨 뜻이야","labels":[]}
+{"text":"비와 음악에 관한 이야기를 써줘","labels":[]}
+

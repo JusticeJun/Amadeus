@@ -81,6 +81,10 @@ class RoutingReport:
     false_positives: tuple[RoutingMismatch, ...]
     false_negatives: tuple[RoutingMismatch, ...]
     latency: LatencyMetrics
+    micro_metrics: ToolMetrics
+    macro_precision: float
+    macro_recall: float
+    macro_f1: float
 
     @property
     def mismatch_count(self) -> int:
@@ -191,6 +195,7 @@ def evaluate_routing(
             false_negatives.append(mismatch)
 
     latency_samples = _measure_latency(case_list, predictor, latency_iterations)
+    aggregate = _aggregate_metrics(metrics)
     return RoutingReport(
         scored_cases=len(scored),
         ambiguous_cases=len(case_list) - len(scored),
@@ -200,7 +205,21 @@ def evaluate_routing(
         false_positives=tuple(false_positives),
         false_negatives=tuple(false_negatives),
         latency=_latency_metrics(latency_samples),
+        micro_metrics=aggregate,
+        macro_precision=fmean(item.precision for item in metrics.values()) if metrics else 0.0,
+        macro_recall=fmean(item.recall for item in metrics.values()) if metrics else 0.0,
+        macro_f1=fmean(item.f1 for item in metrics.values()) if metrics else 0.0,
     )
+
+
+def _aggregate_metrics(metrics: dict[str, ToolMetrics]) -> ToolMetrics:
+    tp = sum(item.true_positive for item in metrics.values())
+    fp = sum(item.false_positive for item in metrics.values())
+    fn = sum(item.false_negative for item in metrics.values())
+    tn = sum(item.true_negative for item in metrics.values())
+    precision = _ratio(tp, tp + fp)
+    recall = _ratio(tp, tp + fn)
+    return ToolMetrics(tp, fp, fn, tn, precision, recall, _ratio(2 * precision * recall, precision + recall))
 
 
 def _all_tool_metrics(

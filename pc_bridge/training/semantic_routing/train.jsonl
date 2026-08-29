@@ -1,0 +1,56 @@
+{"text":"오늘 날씨 알려줘","labels":["weather"]}
+{"text":"밖에 비 와?","labels":["weather"]}
+{"text":"내일 우산 필요할까","labels":["weather"]}
+{"text":"주말 기온이 어떻게 돼","labels":["weather"]}
+{"text":"지금 부산 습도 알려줘","labels":["weather"]}
+{"text":"오늘 많이 덥나","labels":["weather"]}
+{"text":"퇴근할 때 추울까?","labels":["weather"]}
+{"text":"이번 주 일기예보 보여줘","labels":["weather"]}
+{"text":"미세먼지 말고 비가 오는지 알려줘","labels":["weather"]}
+{"text":"weather 어때 today","labels":["weather"]}
+{"text":"아이유 노래 틀어줘","labels":["music_control"]}
+{"text":"음악 재생해 줘","labels":["music_control"]}
+{"text":"이 노래 일시정지","labels":["music_control"]}
+{"text":"다음 곡으로 넘겨","labels":["music_control"]}
+{"text":"아까 듣던 노래 다시 틀자","labels":["music_control"]}
+{"text":"지금 무슨 노래야?","labels":["music_control"]}
+{"text":"재생 목록 셔플해줘","labels":["music_control"]}
+{"text":"볼륨 말고 음악만 멈춰","labels":["music_control"]}
+{"text":"play some jazz 음악","labels":["music_control"]}
+{"text":"마리골드 들려줄래","labels":["music_control"]}
+{"text":"크롬 켜줘","labels":["pc_control"]}
+{"text":"메모장 닫아","labels":["pc_control"]}
+{"text":"컴퓨터 볼륨 좀 줄여줘","labels":["pc_control"]}
+{"text":"소리 최대로 올려","labels":["pc_control"]}
+{"text":"음소거 해제해 줘","labels":["pc_control"]}
+{"text":"브라우저 실행해줄래","labels":["pc_control"]}
+{"text":"notepad 열어줘","labels":["pc_control"]}
+{"text":"PC 볼륨 30으로 맞춰","labels":["pc_control"]}
+{"text":"창을 닫아 줘","labels":["pc_control"]}
+{"text":"크롬 실행 부탁해","labels":["pc_control"]}
+{"text":"날씨 확인하고 음악 틀어줘","labels":["weather","music_control"]}
+{"text":"비 오는지 보고 크롬 켜줘","labels":["weather","pc_control"]}
+{"text":"볼륨 줄이고 마리골드 재생해","labels":["pc_control","music_control"]}
+{"text":"오늘 기온 알려주고 소리 낮춘 다음 노래 틀어","labels":["weather","pc_control","music_control"]}
+{"text":"주말 날씨랑 들을 만한 노래 부탁해","labels":["weather","music_control"]}
+{"text":"안녕 오늘 기분 어때","labels":[]}
+{"text":"고마워","labels":[]}
+{"text":"파이썬 리스트가 뭐야","labels":[]}
+{"text":"바다가 파란 이유를 설명해줘","labels":[]}
+{"text":"크롬이랑 엣지 중 뭐가 좋아?","labels":[]}
+{"text":"이 노래 볼륨이 작은 이유가 뭐야?","labels":[]}
+{"text":"날씨라는 단어의 어원이 뭐야","labels":[]}
+{"text":"비 오는 날을 주제로 시 써줘","labels":[]}
+{"text":"음악 이론에서 화음이란?","labels":[]}
+{"text":"컴퓨터를 누가 발명했어","labels":[]}
+{"text":"서울 지하철 막차 알려줘","labels":[]}
+{"text":"오늘 일정 확인해줘","labels":[]}
+{"text":"미세먼지 수치 알려줘","labels":[]}
+{"text":"자외선 지수 알려줘","labels":[]}
+{"text":"이 사진에 뭐가 보여","labels":[]}
+{"text":"내일 오전 알림 설정해줘","labels":[]}
+{"text":"애플뮤직의 역사 알려줘","labels":[]}
+{"text":"윈도우 볼륨 조절 원리를 설명해줘","labels":[]}
+{"text":"비가 오면 왜 습해져?","labels":[]}
+{"text":"노래 추천 알고리즘을 설명해","labels":[]}
+
