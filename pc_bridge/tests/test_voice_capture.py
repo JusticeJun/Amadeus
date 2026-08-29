@@ -65,3 +65,16 @@ def test_capture_protocol_rejects_transport_or_i2s_errors() -> None:
             b"\0\0\0\0",
             CaptureSummary(2, 4, 1, 2, 0, 0, 0),
         )
+
+
+def test_capture_protocol_rejects_dma_sample_loss_when_reads_succeed() -> None:
+    frame = parse_audio_begin(
+        "AUDIO_BEGIN rate=16000 channels=1 bits=16 samples=2 bytes=4",
+    )
+
+    with pytest.raises(ValueError, match="read_errors=0, overruns=5"):
+        validate_capture(
+            frame,
+            b"\0\0\0\0",
+            CaptureSummary(2, 4, 0, 5, -10, 10, 0),
+        )

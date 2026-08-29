@@ -100,6 +100,33 @@ bool initializeI2s() {
     i2s_driver_uninstall(kI2sPort);
     return false;
   }
+  result = i2s_stop(kI2sPort);
+  if (result != ESP_OK) {
+    printError("i2s_stop", result);
+    i2s_driver_uninstall(kI2sPort);
+    return false;
+  }
+  return true;
+}
+
+bool startCapture() {
+  CaptureStats idleStats;
+  drainI2sEvents(idleStats);
+  esp_err_t result = i2s_zero_dma_buffer(kI2sPort);
+  if (result != ESP_OK) {
+    printError("i2s_zero_dma_buffer", result);
+    return false;
+  }
+
+  // Re-applying the clock while stopped resets the legacy driver's internal
+  // RX buffer queue before it starts DMA. Idle overflows therefore cannot be
+  // attributed to the requested capture.
+  result = i2s_set_clk(kI2sPort, kSampleRate, I2S_BITS_PER_SAMPLE_32BIT,
+                       I2S_CHANNEL_MONO);
+  if (result != ESP_OK) {
+    printError("i2s_set_clk", result);
+    return false;
+  }
   return true;
 }
 
@@ -117,9 +144,12 @@ void capture(uint32_t seconds) {
   Serial.printf("[voice] capture_start seconds=%u requested_samples=%u\n",
                 static_cast<unsigned>(seconds),
                 static_cast<unsigned>(requestedSamples));
-  i2s_zero_dma_buffer(kI2sPort);
   CaptureStats stats;
-  drainI2sEvents(stats);
+  if (!startCapture()) {
+    heap_caps_free(pcm);
+    Serial.println("AUDIO_ERROR capture_start_failed");
+    return;
+  }
 
   size_t capturedSamples = 0;
   int32_t raw[kReadSamples]{};
@@ -149,6 +179,13 @@ void capture(uint32_t seconds) {
     }
     drainI2sEvents(stats);
   }
+
+  const esp_err_t stopResult = i2s_stop(kI2sPort);
+  if (stopResult != ESP_OK) {
+    ++stats.readErrors;
+    printError("i2s_stop", stopResult);
+  }
+  drainI2sEvents(stats);
 
   if (capturedSamples == 0) {
     stats.minimum = 0;

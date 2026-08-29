@@ -15,6 +15,18 @@ The firmware receives each 32-bit slot, sign-extends the valid upper 24 bits,
 then discards the least-significant eight valid bits to produce PCM16. No
 sample-rate conversion or digital gain is applied.
 
+The diagnostic keeps I2S stopped while it waits for a command and while PCM
+is sent to the PC. At capture start it resets the legacy driver's RX buffer
+queue and starts DMA; it stops DMA immediately after reading the requested
+samples. `overruns` therefore counts RX DMA buffers actually discarded during
+the active capture, not overflow events accumulated while idle.
+
+Mono PCM16 at 16 kHz is 32,000 bytes/s. The I2S driver reads the microphone's
+32-bit slots at 64,000 bytes/s, while 921600-baud UART with 8N1 framing has a
+theoretical payload ceiling of 92,160 bytes/s. PCM is buffered in PSRAM and
+transmitted only after capture, so serial backpressure is outside the I2S read
+loop.
+
 ## Wiring
 
 Power the board off before wiring.
