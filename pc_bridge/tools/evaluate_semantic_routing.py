@@ -15,6 +15,7 @@ from app.models import ChatMessage  # noqa: E402
 from app.pc_control import default_app_registry  # noqa: E402
 from app.routing import (  # noqa: E402
     LocalMlSemanticRouter,
+    SentenceMlSemanticRouter,
     RoutingRequest,
     create_default_semantic_router,
     create_rule_based_semantic_router,
@@ -34,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--fail-on-mismatch", action="store_true")
     parser.add_argument(
         "--router",
-        choices=("hybrid", "rule", "ml", "hybrid-research", "ml-research"),
+        choices=("hybrid", "rule", "ml", "hybrid-research", "ml-research", "sentence-ml"),
         default="hybrid",
     )
     return parser
@@ -44,12 +45,14 @@ def main() -> int:
     args = build_parser().parse_args()
     apps = default_app_registry()
     research_model = DEFAULT_MODEL_PATH.with_name("semantic-router-v2-external-research.json")
+    sentence_model = DEFAULT_MODEL_PATH.with_name("semantic-router-v3-multilingual-minilm-research.json")
     router = {
         "hybrid": lambda: create_default_semantic_router(apps),
         "rule": lambda: create_rule_based_semantic_router(apps),
         "ml": lambda: LocalMlSemanticRouter(DEFAULT_MODEL_PATH),
         "hybrid-research": lambda: create_default_semantic_router(apps, model_path=research_model),
         "ml-research": lambda: LocalMlSemanticRouter(research_model),
+        "sentence-ml": lambda: SentenceMlSemanticRouter(sentence_model),
     }[args.router]()
 
     def predict(case: RoutingCase) -> set[str]:

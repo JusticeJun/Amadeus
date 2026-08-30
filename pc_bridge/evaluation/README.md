@@ -92,3 +92,10 @@ requirement.
 - Keep `expected_tools: null` and category `ambiguous` when a person cannot reasonably decide from the available context. Do not force these cases into positive or negative labels.
 
 The report separates standard scored single-turn cases, context-required cases, unsupported-capability cases, and ambiguous cases. Overall metrics remain available, but slice metrics should be consulted before comparing routers with different context or capability support.
+
+The optional frozen sentence-encoder research model requires
+`uv sync --extra semantic-routing`. Reproduce its linear head with
+`python tools/train_sentence_semantic_router.py` and evaluate it with
+`python tools/evaluate_semantic_routing.py --router sentence-ml`. The encoder must already
+exist in the local Hugging Face cache; training and runtime loading use offline mode after
+the explicitly reviewed model download.

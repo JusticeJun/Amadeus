@@ -41,10 +41,9 @@ partitions are evaluated separately and never merged with the Amadeus holdout.
 
 The classifier still produces confidence for every capability. Runtime fallback promotion
 is separately controlled by the capability catalog: only read-only weather is enabled.
-A narrow post-classification safety predicate rejects reviewed non-weather uses such as
-ordinary outdoor activity suitability, mood metaphors, media/title references, and device
-weather damage before promotion. Side-effecting music and PC predictions remain measurable
-but cannot reach Tool execution until independent evidence supports a safe policy.
+Side-effecting music and PC predictions remain measurable but cannot reach Tool execution
+until independent evidence supports a safe policy. Semantic false positives are not
+corrected with capability-specific keyword or phrase predicates.
 
 The checked-in hand-authored corpus is retained as `amadeus-hand-authored-baseline-v1`,
 but is quarantined wholesale from the final prepared corpus after an independent leakage
@@ -99,9 +98,39 @@ retrain, select thresholds on validation, then evaluate once on the independent 
 - The boundary-augmented research artifact is 1,864,038 bytes with SHA-256
   `9ea571ce3f75ab9d417e04100d75bb273b293c921c4f2fa18145134758b8d30c` and thresholds
   weather 0.33, music 0.65, PC 0.85. Two independent retraining runs produced the same hash.
-- On the untouched Amadeus holdout, the production hybrid changes from micro F1 0.8982
-  before the runtime boundary fix to 0.8995 after it. The updated research hybrid reaches
-  0.9024, but production v1 remains selected because the holdout was not used for model
-  promotion. Separate external-test standalone ML changes from micro P/R/F1
+- The capability-specific Weather predicate and media phrase patch were removed after
+  ablation showed that they, rather than the classifier, accounted for the false-positive
+  reduction. Production hybrid v1 therefore remains at micro F1 0.8982 on the untouched
+  Amadeus holdout. Separate external-test standalone ML changes from micro P/R/F1
   0.901/0.861/0.880 and exact 0.960 to 0.905/0.858/0.881 and exact 0.960. The production
   v1 standalone baseline remains 0.916/0.444/0.598 and exact 0.897.
+
+## Frozen multilingual sentence encoder experiment
+
+The single sentence-level candidate is
+[`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2),
+an Apache-2.0 multilingual MiniLM Sentence Transformer supporting Korean among 50+
+languages. It produces normalized 384-dimensional embeddings. The encoder is frozen;
+three independent logistic regression heads learn `weather`, `music_control`, and
+`pc_control`. Per-label F0.5 thresholds are selected on validation for conservative OOS
+rejection. No capability-specific semantic rules are applied.
+
+- Artifact: 23,441 bytes with deterministic SHA-256
+  `bb3b63f18502c21857fb13bf0985eacb4f5fb52690ecba01f97e54b901e26f1e`;
+  thresholds weather 0.36, music 0.52, PC 0.56. Two offline runs matched exactly.
+- Validation standalone micro P/R/F1 is 0.880/0.657/0.752, exact 0.898. Weather is
+  0.860/0.746/0.799. Multi-label exact is 0.022.
+- Boundary Weather P/R/F1 is 0.800/1.000/0.889 with two false positives. The model keeps
+  indirect clothing Weather but still routes an ordinary outdoor-study question as Weather.
+- External-test standalone micro P/R/F1 is 0.870/0.718/0.787, exact 0.934. Weather is
+  0.872/0.807/0.838. The TF-IDF research model remains stronger at 0.905/0.858/0.881,
+  exact 0.960.
+- Final one-time Amadeus holdout standalone sentence-model micro F1 is 0.414; the hybrid
+  with the unchanged rule fast path and execution allow-list is 0.878 versus production
+  hybrid v1 at 0.898. It is not promoted.
+
+The frozen encoder improves semantic recall but does not provide sufficient OOS precision
+or multi-label separation on the current corpus. SetFit-style contrastive encoder tuning is
+a technically valid next experiment, but is not implemented in Issue #27 because the
+minimal verified architecture did not justify expanding this work into a broader NLP
+research project.

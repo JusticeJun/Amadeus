@@ -12,8 +12,6 @@ from app.routing import (
     RoutingRequest,
 )
 from app.routing.defaults import DEFAULT_MODEL_PATH
-from app.pc_control import default_app_registry
-from app.routing import create_default_semantic_router
 
 
 def _write_artifact(path: Path, *, threshold: float = 0.5) -> Path:
@@ -106,25 +104,3 @@ def test_versioned_model_predicts_multilabel_and_no_match_validation_cases() -> 
         not row["capabilities"] and not router.route(RoutingRequest(row["text"])).matches
         for row in rows
     )
-
-
-@pytest.mark.parametrize("text", [
-    "오늘 겉옷 하나 더 입는 게 나으려나?",
-    "반팔만 입고 나가면 추우려나?",
-    "빨래를 밖에 널어도 돼?",
-])
-def test_weather_ml_promotion_preserves_indirect_weather_requests(text: str) -> None:
-    decision = create_default_semantic_router(default_app_registry()).route(RoutingRequest(text))
-    assert decision.required_capabilities == {"weather"}
-
-
-@pytest.mark.parametrize("text", [
-    "공원에서 공부해도 괜찮을까?",
-    "오늘 학교 가기 싫은데",
-    "마음이 먹구름처럼 우중충하네",
-    "컴퓨터가 비를 맞아서 고장 났어",
-    "비라는 제목의 앨범이었나?",
-])
-def test_weather_ml_promotion_rejects_topical_and_activity_overlap(text: str) -> None:
-    decision = create_default_semantic_router(default_app_registry()).route(RoutingRequest(text))
-    assert not decision.matches

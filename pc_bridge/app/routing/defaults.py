@@ -17,17 +17,13 @@ from .music_control_rules import (
     matches_music_control_request,
 )
 from .capabilities import CAPABILITIES
-from .composite import (
-    CapabilityFilterSemanticRouter,
-    MatchPredicateFilterSemanticRouter,
-    PlanningGuardSemanticRouter,
-)
+from .composite import CapabilityFilterSemanticRouter, PlanningGuardSemanticRouter
 from .fallback import NoMatchFallbackSemanticRouter
 from .local_ml import LocalMlSemanticRouter
 from .music_fallback import MusicFallbackSemanticRouter
 from .base import SemanticRouter
 from .rule_based import RuleBasedSemanticRouter
-from .weather_rules import matches_weather_request, supports_weather_ml_promotion
+from .weather_rules import matches_weather_request
 
 
 DEFAULT_MODEL_PATH = Path(__file__).with_name("artifacts") / "semantic-router-v1.json"
@@ -57,12 +53,8 @@ def create_default_semantic_router(
     model_path: Path = DEFAULT_MODEL_PATH,
 ) -> SemanticRouter:
     fast_path = create_rule_based_semantic_router(apps)
-    evidence_checked_ml = MatchPredicateFilterSemanticRouter(
-        LocalMlSemanticRouter(model_path),
-        {"weather": supports_weather_ml_promotion},
-    )
     approved_ml = CapabilityFilterSemanticRouter(
-        evidence_checked_ml,
+        LocalMlSemanticRouter(model_path),
         frozenset(item.name for item in CAPABILITIES if item.ml_fallback_enabled),
     )
     ml_fallback = PlanningGuardSemanticRouter(

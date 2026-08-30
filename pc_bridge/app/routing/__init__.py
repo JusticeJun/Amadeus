@@ -4,6 +4,7 @@ from .base import CapabilityMatch, RouteDecision, RoutingRequest, SemanticRouter
 from .capabilities import CAPABILITIES, CAPABILITY_NAMES, CapabilityDefinition
 from .defaults import create_default_semantic_router, create_rule_based_semantic_router
 from .local_ml import LocalMlSemanticRouter, ModelArtifactError
+from .sentence_ml import SentenceMlSemanticRouter
 from .pc_control_rules import (
     detect_conditional_pc_planning,
     matches_pc_control_request,
@@ -21,6 +22,7 @@ __all__ = [
     "CAPABILITIES",
     "CAPABILITY_NAMES",
     "LocalMlSemanticRouter",
+    "SentenceMlSemanticRouter",
     "ModelArtifactError",
     "RouteDecision",
     "RoutingRequest",
