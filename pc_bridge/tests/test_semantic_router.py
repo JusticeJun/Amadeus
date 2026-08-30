@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.models import ChatMessage
+import numpy as np
 import pytest
 
 from app.routing import (
@@ -13,6 +14,15 @@ from app.routing import (
 from app.pc_control import AppDefinition, AppRegistry
 from app.tools import ToolExecutor
 from app.tools.base import ToolResult
+
+
+def test_setfit_threshold_selection_prefers_conservative_f05() -> None:
+    from tools.train_setfit_semantic_router import select_threshold
+
+    scores = np.asarray([0.9, 0.8, 0.7, 0.6])
+    targets = np.asarray([True, False, True, False])
+
+    assert select_threshold(scores, targets) == pytest.approx(0.89)
 
 
 class StubTool:

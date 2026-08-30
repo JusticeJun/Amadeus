@@ -69,6 +69,13 @@ controls whether an accepted prediction may reach a side-effecting Tool. Researc
 must outperform the production boundary without capability-specific semantic predicates
 before promotion.
 
+The final Issue #27 research experiment applies standard SetFit contrastive tuning to the
+same multilingual MiniLM encoder and uses its supported multi-label one-vs-rest logistic
+head. It remains an offline research artifact: despite improved Weather separation and
+overall hybrid F1, independent multi-label recall remains insufficient for production.
+The production TF-IDF artifact and the separate Weather-only ML execution allow-list are
+therefore unchanged.
+
 ## LLM Routing
 
 LLM을 사용하는 계층은 특정 provider나 model에 직접 결합하지 않는다.

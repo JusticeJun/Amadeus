@@ -131,6 +131,40 @@ rejection. No capability-specific semantic rules are applied.
 
 The frozen encoder improves semantic recall but does not provide sufficient OOS precision
 or multi-label separation on the current corpus. SetFit-style contrastive encoder tuning is
-a technically valid next experiment, but is not implemented in Issue #27 because the
-minimal verified architecture did not justify expanding this work into a broader NLP
-research project.
+a technically valid final experiment.
+
+## SetFit contrastive sentence encoder experiment
+
+The final Issue #27 model experiment uses SetFit 1.1.3 with Transformers 4.x and the same
+Apache-2.0 multilingual MiniLM encoder. Standard `CosineSimilarityLoss` contrastive tuning
+runs for one epoch over 21,698 pairs (one iteration, batch 16, learning rate 2e-5). SetFit's
+supported `one-vs-rest` multi-target strategy trains three logistic heads. Per-label F0.5
+thresholds are selected only from validation: Weather 0.86, Music 0.81, and PC 0.91.
+No handcrafted capability semantic filter is present.
+
+- Validation standalone micro P/R/F1 is 0.940/0.799/0.864, exact 0.946. Per-label F1 is
+  Weather 0.903, Music 0.862, and PC 0.805. Of 2,068 OOS rows, 2,033 are rejected and 35
+  are false promotions.
+- External official test micro P/R/F1 is 0.922/0.877/0.899, exact 0.967. Per-label F1 is
+  Weather 0.929, Music 0.895, and PC 0.857.
+- On the independent Weather boundary, Weather P/R/F1 is 1.000/1.000/1.000 with zero
+  Weather false positives. Two negative rows receive Music predictions and one positive
+  row also receives PC; these cannot execute through the unchanged ML allow-list.
+- Independent multi-label micro P/R/F1 is 1.000/0.234/0.379 with exact 0.000. Pair exact
+  match is zero for Weather+Music, Weather+PC, and Music+PC. This remains a decisive
+  limitation despite improved single-capability separation.
+- The final untouched Amadeus holdout standalone micro P/R/F1 is 0.742/0.605/0.667,
+  exact 0.624. Hybrid rule fast path plus unchanged Weather-only ML promotion reaches
+  0.880/0.963/0.920, exact 0.880, versus production TF-IDF v1 hybrid F1 0.898.
+- Warm CPU latency is 41.9 ms mean and 47.5 ms p95. The saved model is 487,738,340 bytes,
+  including a 6,608-byte classifier head, with directory fingerprint
+  `39958d8cbc76726af8d47713510e336cdf84ff64d8e89d97a72a06120b145fa6`.
+- Exact/normalized and audit-only near-overlap remain zero. Training, threshold selection,
+  and configuration use only development train/validation; external and independent
+  corpora are evaluation-only.
+
+SetFit improves the semantic Weather boundary and overall hybrid score, but it does not
+solve multi-label routing and is roughly 5x slower than the frozen encoder while producing
+a much larger artifact. It is not promoted. Issue #27 stops model exploration here and
+retains production TF-IDF v1, its documented lexical limitations, and the separate
+Music/PC ML-only execution block.
