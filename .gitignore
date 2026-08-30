@@ -32,6 +32,7 @@ pc_bridge/.pytest_cache/
 pc_bridge/.env
 pc_bridge/captures/
 pc_bridge/research_artifacts/
+pc_bridge/research_data/
 
 # Isolated Apple Music browser profile and CDP state
 pc_bridge/apple-music-profile/

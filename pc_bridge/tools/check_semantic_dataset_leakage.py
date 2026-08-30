@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 import unicodedata
@@ -46,7 +47,14 @@ def near_overlap(left: set[str], right: set[str], threshold: float = 0.85) -> tu
 
 
 def main() -> int:
-    prepared = BRIDGE_ROOT / "training" / "semantic_routing" / "prepared"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--prepared-dir",
+        type=Path,
+        default=BRIDGE_ROOT / "training" / "semantic_routing" / "prepared",
+    )
+    args = parser.parse_args()
+    prepared = args.prepared_dir
     evaluation = BRIDGE_ROOT / "evaluation" / "cases"
     train = texts([prepared / "train.jsonl"])
     validation = texts([prepared / "validation.jsonl"])

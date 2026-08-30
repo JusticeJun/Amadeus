@@ -76,6 +76,8 @@ def main() -> int:
     parser.add_argument("--num-iterations", type=int, default=1)
     parser.add_argument("--body-epochs", type=int, default=1)
     parser.add_argument("--body-learning-rate", type=float, default=2e-5)
+    parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    parser.add_argument("--model-version", default="semantic-router-v4-setfit-research")
     args = parser.parse_args()
 
     from datasets import Dataset
@@ -85,8 +87,8 @@ def main() -> int:
     random.seed(SEED)
     np.random.seed(SEED)
     torch.manual_seed(SEED)
-    train_path = DATA_DIR / "train.jsonl"
-    validation_path = DATA_DIR / "validation.jsonl"
+    train_path = args.data_dir / "train.jsonl"
+    validation_path = args.data_dir / "validation.jsonl"
     train_rows = load_rows(train_path)
     validation_rows = load_rows(validation_path)
     train_targets = multilabel_targets(train_rows)
@@ -134,7 +136,7 @@ def main() -> int:
     fingerprint = hashlib.sha256(train_path.read_bytes() + b"\0" + validation_path.read_bytes()).hexdigest()
     metadata = {
         "schema_version": 1,
-        "model_version": "semantic-router-v4-setfit-research",
+        "model_version": args.model_version,
         "algorithm": "setfit-multilabel-one-vs-rest-logistic-regression",
         "setfit_version": __import__("setfit").__version__,
         "seed": SEED,

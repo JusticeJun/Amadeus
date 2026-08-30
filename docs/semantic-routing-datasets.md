@@ -168,3 +168,45 @@ solve multi-label routing and is roughly 5x slower than the frozen encoder while
 a much larger artifact. It is not promoted. Issue #27 stops model exploration here and
 retains production TF-IDF v1, its documented lexical limitations, and the separate
 Music/PC ML-only execution block.
+
+## Controlled SetFit multi-label coverage ablation
+
+A single follow-up ablation tests whether composition scarcity caused the SetFit
+multi-label failure. The baseline 10,849-row train split and its 180 multi-label rows are
+preserved. A separate research split adds 720 deterministic Korean clause compositions:
+240 for each capability pair and 180 for each of explicit+explicit, implicit+explicit,
+explicit+implicit, and implicit+implicit. The resulting train split has 11,569 rows and
+900 multi-label rows, with 300 per pair. Parents come only from existing provenance-aware
+single-label development rows; parent IDs, connector, order, and composition type are
+recorded. Frozen manual regression utterances are excluded and are not generation seeds.
+Validation and external files are byte-identical to the baseline.
+
+All model settings remain fixed. Validation-selected thresholds change naturally from
+Weather/Music/PC 0.86/0.81/0.91 to 0.95/0.80/0.74; no threshold is manually adjusted.
+Augmented-minus-baseline results on identical slices are:
+
+- Validation all: micro F1 +0.0291 and exact +0.0029; single-label F1 +0.0103. Multi-label
+  recall/F1/exact improve by +0.3111/+0.3431/+0.0667. OOS false promotions increase
+  from 35 to 42 (+7).
+- External official test: micro precision/recall/F1 change by -0.0179/-0.0056/-0.0115
+  and exact by -0.0029. Single-label F1 changes by -0.0067. OOS false promotions increase
+  from 50 to 58 (+8).
+- Independent holdout standalone: micro F1 +0.0273 but exact -0.0113. Single-label F1
+  improves +0.0229. Multi-label recall/F1/exact improve by +0.1489/+0.1745/+0.0435,
+  while OOS exact rejection drops 0.62 to 0.53 and false promotions rise 38 to 47 (+9).
+- Pair exact remains 0 for Weather+Music and Weather+PC. Music+PC improves from 0 to 1
+  on its single holdout case. Weather boundary metrics and production-policy hybrid
+  metrics are unchanged; Weather itself remains P/R/F1 1.0/1.0/1.0 with zero Weather FP.
+- Frozen manual accepted labels remain correct for all three single-intent cases. None of
+  the three manual multi-label cases becomes exact: Weather+Music still accepts Music,
+  Weather+PC changes from no labels to PC only, and Music+PC remains below both thresholds.
+- Same-process warm CPU latency is effectively unchanged (8.41 ms baseline vs 8.05 ms
+  augmented mean). Artifact size changes from 487,738,340 to 487,738,413 bytes; the head
+  remains 6,608 bytes. Two augmented retraining runs produced the same canonical artifact
+  SHA-256 `0b45259e379743f71f88810120045c92adfc2c63f10696f976ec7acaea4fdc87`.
+
+The hypothesis is partially supported: additional composition coverage materially raises
+multi-label recall but does not solve two of three pair types, and it weakens OOS rejection
+and external precision/generalization. This is a Pareto trade-off, not a successful
+replacement candidate. Both research artifacts are retained for user review; production
+selection remains open and production TF-IDF/routing policy is unchanged.
