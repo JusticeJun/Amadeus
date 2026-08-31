@@ -210,3 +210,66 @@ multi-label recall but does not solve two of three pair types, and it weakens OO
 and external precision/generalization. This is a Pareto trade-off, not a successful
 replacement candidate. Both research artifacts are retained for user review; production
 selection remains open and production TF-IDF/routing policy is unchanged.
+
+## Conversationally balanced SetFit experiment
+
+The final controlled corpus experiment starts from the 11,569-row positive-only research
+split and adds reviewed Amadeus semantic families rather than another model or parameter
+change. Each added row records orthogonal `interaction`, `request_form`, `routing_role`,
+`domains`, `composition`, and `ambiguity` metadata. The taxonomy distinguishes ordinary
+conversation, factual questions, emotional statements, observations, domain no-action,
+lexical traps, conservative ambiguity, full multi-label, partial multi-label, and neither-
+actionable composition. These fields describe the routing evidence without changing the
+runtime capability vocabulary.
+
+The train split adds 720 rows: 180 conversational no-tool rows, 240 matched single-domain
+rows (60 Weather, 90 Music, and 90 PC), and 300 pairwise rows. Each capability pair has 28
+full multi-label, 22 left-only, 22 right-only, 16 neither, and 12 ambiguous examples.
+Validation adds 270 independently worded rows: 60 conversational, 90 matched single-domain,
+and 120 pairwise. The resulting research corpus has 12,289 train and 2,984 validation rows.
+The pairwise rows include integrated requests and matched partial/no-action counterexamples;
+they do not consist solely of two positive parent clauses joined by a connector.
+
+Quality gates found zero normalized duplicates or label conflicts in the additions, zero
+character-trigram near duplicates at the audit-only 0.85 threshold within either split or
+between train and validation, and zero exact overlap with the baseline train, validation,
+or external partitions. Normalized exact and the same heuristic near-overlap checks against
+the independent holdout are zero; maximum similarities are 0.4545 for train and 0.2273 for
+validation. Frozen manual normalized overlap is zero. These checks support process and
+provenance isolation, not a claim that semantic leakage is impossible.
+
+The model configuration remains SetFit 1.1.3 with multilingual MiniLM, cosine similarity
+loss, one epoch, batch 16, one iteration, learning rate 2e-5, seed 1729, and the supported
+one-vs-rest logistic head. Validation F0.5 selection produces thresholds Weather 0.70,
+Music 0.85, and PC 0.78. Compared with the original SetFit candidate:
+
+- Original validation micro F1/exact is 0.864/0.946 with 35 no-match false promotions;
+  balanced is 0.905/0.954 with 40.
+- Original external micro precision/recall/F1/exact is 0.922/0.877/0.899/0.967 with 50
+  no-match false promotions; balanced is 0.898/0.880/0.889/0.964 with 64.
+- Original independent standalone F1/exact is 0.667/0.624 with 38 no-match false
+  promotions; balanced is 0.743/0.669 with 35.
+- Independent multi-label precision/recall/F1/exact improves from
+  1.000/0.234/0.379/0.000 to 1.000/0.638/0.779/0.348. Weather+Music and Weather+PC exact
+  become 0.286 and 0.429; the single Music+PC holdout case remains non-exact.
+- Weather boundary classification remains P/R/F1 1.0/1.0/1.0 with zero Weather false
+  positives. Overall boundary exact improves because unrelated secondary predictions are
+  reduced.
+- On the reviewed development slice used during threshold selection, balanced full-
+  multi-label exact is 0.533, partial exact is 0.926, and neither-actionable exact is 1.0.
+  These are development diagnostics, not independent generalization results.
+- Five of six frozen manual cases are exact. The Music+PC case accepts PC only because its
+  Music score 0.807 remains below the automatically selected 0.85 threshold.
+- The artifact is 487,738,601 bytes with a 6,608-byte classifier head. Two runs produce
+  the same canonical SHA-256 `dd18b54aef3458b6850ce232a722f078ca6796461da89d7ec8e4727c602a799a`;
+  same-process warm CPU inference is approximately 7.7 ms mean and 8.3 ms p95.
+
+The corpus-quality hypothesis is partially supported. Balanced semantic evidence greatly
+improves compositional and independent-holdout behavior while recovering no-tool margin on
+the known frozen outdoor example, but it does not preserve external rejection: external
+false promotions rise by 14 and precision falls by about 0.024 from the original SetFit
+candidate. The balanced artifact is therefore research evidence, not a production
+replacement. Production TF-IDF and the Weather-only ML execution allow-list remain
+unchanged. The separate fallback composition policy also remains unchanged: a rule match
+prevents ML from supplementing a missing capability, while unconditional rule/ML union
+would introduce unsafe secondary promotions.

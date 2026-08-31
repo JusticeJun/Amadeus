@@ -1,0 +1,421 @@
+{
+  "model": {
+    "algorithm": "setfit-multilabel-one-vs-rest-logistic-regression",
+    "classification_head": "sklearn OneVsRestClassifier(LogisticRegression)",
+    "contrastive": {
+      "batch_size": 16,
+      "epochs": 1,
+      "learning_rate": 2e-05,
+      "loss": "CosineSimilarityLoss",
+      "num_iterations": 1
+    },
+    "dataset_sha256": "85b768e42b9b2546d25eb14a5c0dc50c613a6d9f270ba92ba2ae648cd4c097f9",
+    "encoder": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "labels": [
+      "weather",
+      "music_control",
+      "pc_control"
+    ],
+    "model_version": "semantic-router-v6-setfit-balanced-research",
+    "multi_target_strategy": "one-vs-rest",
+    "normalize_embeddings": true,
+    "schema_version": 1,
+    "seed": 1729,
+    "setfit_version": "1.1.3",
+    "threshold_strategy": "per-label validation F0.5 for OOS precision",
+    "thresholds": {
+      "music_control": 0.8500000000000002,
+      "pc_control": 0.7800000000000001,
+      "weather": 0.7000000000000002
+    },
+    "training_examples": 12289,
+    "validation_examples": 2984
+  },
+  "validation": {
+    "micro": {
+      "precision": 0.937888198757764,
+      "recall": 0.874095513748191,
+      "f1": 0.9048689138576779,
+      "tp": 604,
+      "fp": 40,
+      "fn": 87
+    },
+    "exact_match": 0.9535740604274134,
+    "labels": {
+      "weather": {
+        "precision": 0.9292452830188679,
+        "recall": 0.9609756097560975,
+        "f1": 0.9448441247002398,
+        "tp": 197,
+        "fp": 15,
+        "fn": 8
+      },
+      "music_control": {
+        "precision": 0.935064935064935,
+        "recall": 0.829971181556196,
+        "f1": 0.8793893129770992,
+        "tp": 288,
+        "fp": 20,
+        "fn": 59
+      },
+      "pc_control": {
+        "precision": 0.9596774193548387,
+        "recall": 0.8561151079136691,
+        "f1": 0.9049429657794678,
+        "tp": 119,
+        "fp": 5,
+        "fn": 20
+      }
+    },
+    "no_match": {
+      "cases": 2068,
+      "correct_rejections": 2028,
+      "false_promotions": 40
+    }
+  },
+  "external_test": {
+    "micro": {
+      "precision": 0.8979885057471264,
+      "recall": 0.8802816901408451,
+      "f1": 0.8890469416785205,
+      "tp": 625,
+      "fp": 71,
+      "fn": 85
+    },
+    "exact_match": 0.9635214007782101,
+    "labels": {
+      "weather": {
+        "precision": 0.9019607843137255,
+        "recall": 0.9108910891089109,
+        "f1": 0.9064039408866996,
+        "tp": 184,
+        "fp": 20,
+        "fn": 18
+      },
+      "music_control": {
+        "precision": 0.9002624671916011,
+        "recall": 0.8705583756345178,
+        "f1": 0.8851612903225806,
+        "tp": 343,
+        "fp": 38,
+        "fn": 51
+      },
+      "pc_control": {
+        "precision": 0.8828828828828829,
+        "recall": 0.8596491228070176,
+        "f1": 0.8711111111111112,
+        "tp": 98,
+        "fp": 13,
+        "fn": 16
+      }
+    },
+    "no_match": {
+      "cases": 3402,
+      "correct_rejections": 3338,
+      "false_promotions": 64
+    }
+  },
+  "independent_holdout_standalone": {
+    "micro": {
+      "precision": 0.7653631284916201,
+      "recall": 0.7210526315789474,
+      "f1": 0.7425474254742548,
+      "tp": 137,
+      "fp": 42,
+      "fn": 53
+    },
+    "exact_match": 0.6691729323308271,
+    "labels": {
+      "weather": {
+        "precision": 0.7428571428571429,
+        "recall": 0.8863636363636364,
+        "f1": 0.8082901554404146,
+        "tp": 78,
+        "fp": 27,
+        "fn": 10
+      },
+      "music_control": {
+        "precision": 0.8823529411764706,
+        "recall": 0.8108108108108109,
+        "f1": 0.8450704225352113,
+        "tp": 30,
+        "fp": 4,
+        "fn": 7
+      },
+      "pc_control": {
+        "precision": 0.725,
+        "recall": 0.4461538461538462,
+        "f1": 0.5523809523809524,
+        "tp": 29,
+        "fp": 11,
+        "fn": 36
+      }
+    },
+    "no_match": {
+      "cases": 100,
+      "correct_rejections": 65,
+      "false_promotions": 35
+    }
+  },
+  "independent_holdout_hybrid": {
+    "micro": {
+      "precision": 0.8714285714285714,
+      "recall": 0.9631578947368421,
+      "f1": 0.9149999999999999,
+      "tp": 183,
+      "fp": 27,
+      "fn": 7
+    },
+    "exact_match": 0.8721804511278195,
+    "labels": {
+      "weather": {
+        "precision": 0.7545454545454545,
+        "recall": 0.9431818181818182,
+        "f1": 0.8383838383838385,
+        "tp": 83,
+        "fp": 27,
+        "fn": 5
+      },
+      "music_control": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 37,
+        "fp": 0,
+        "fn": 0
+      },
+      "pc_control": {
+        "precision": 1.0,
+        "recall": 0.9692307692307692,
+        "f1": 0.9843749999999999,
+        "tp": 63,
+        "fp": 0,
+        "fn": 2
+      }
+    },
+    "no_match": {
+      "cases": 100,
+      "correct_rejections": 74,
+      "false_promotions": 26
+    }
+  },
+  "multi_label_holdout": {
+    "micro": {
+      "precision": 1.0,
+      "recall": 0.6382978723404256,
+      "f1": 0.7792207792207793,
+      "tp": 30,
+      "fp": 0,
+      "fn": 17
+    },
+    "exact_match": 0.34782608695652173,
+    "labels": {
+      "weather": {
+        "precision": 1.0,
+        "recall": 0.8181818181818182,
+        "f1": 0.9,
+        "tp": 18,
+        "fp": 0,
+        "fn": 4
+      },
+      "music_control": {
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "tp": 6,
+        "fp": 0,
+        "fn": 3
+      },
+      "pc_control": {
+        "precision": 1.0,
+        "recall": 0.375,
+        "f1": 0.5454545454545454,
+        "tp": 6,
+        "fp": 0,
+        "fn": 10
+      }
+    },
+    "no_match": {
+      "cases": 0,
+      "correct_rejections": 0,
+      "false_promotions": 0
+    }
+  },
+  "multi_label_pairs": {
+    "weather+music_control": {
+      "micro": {
+        "precision": 1.0,
+        "recall": 0.6428571428571429,
+        "f1": 0.782608695652174,
+        "tp": 9,
+        "fp": 0,
+        "fn": 5
+      },
+      "exact_match": 0.2857142857142857,
+      "labels": {
+        "weather": {
+          "precision": 1.0,
+          "recall": 0.7142857142857143,
+          "f1": 0.8333333333333333,
+          "tp": 5,
+          "fp": 0,
+          "fn": 2
+        },
+        "music_control": {
+          "precision": 1.0,
+          "recall": 0.5714285714285714,
+          "f1": 0.7272727272727273,
+          "tp": 4,
+          "fp": 0,
+          "fn": 3
+        },
+        "pc_control": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        }
+      },
+      "no_match": {
+        "cases": 0,
+        "correct_rejections": 0,
+        "false_promotions": 0
+      }
+    },
+    "weather+pc_control": {
+      "micro": {
+        "precision": 1.0,
+        "recall": 0.6785714285714286,
+        "f1": 0.8085106382978724,
+        "tp": 19,
+        "fp": 0,
+        "fn": 9
+      },
+      "exact_match": 0.42857142857142855,
+      "labels": {
+        "weather": {
+          "precision": 1.0,
+          "recall": 0.9285714285714286,
+          "f1": 0.962962962962963,
+          "tp": 13,
+          "fp": 0,
+          "fn": 1
+        },
+        "music_control": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "pc_control": {
+          "precision": 1.0,
+          "recall": 0.42857142857142855,
+          "f1": 0.6,
+          "tp": 6,
+          "fp": 0,
+          "fn": 8
+        }
+      },
+      "no_match": {
+        "cases": 0,
+        "correct_rejections": 0,
+        "false_promotions": 0
+      }
+    },
+    "music_control+pc_control": {
+      "micro": {
+        "precision": 1.0,
+        "recall": 0.5,
+        "f1": 0.6666666666666666,
+        "tp": 1,
+        "fp": 0,
+        "fn": 1
+      },
+      "exact_match": 0.0,
+      "labels": {
+        "weather": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0
+        },
+        "music_control": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "tp": 1,
+          "fp": 0,
+          "fn": 0
+        },
+        "pc_control": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 1
+        }
+      },
+      "no_match": {
+        "cases": 0,
+        "correct_rejections": 0,
+        "false_promotions": 0
+      }
+    }
+  },
+  "weather_boundary": {
+    "micro": {
+      "precision": 1.0,
+      "recall": 0.8888888888888888,
+      "f1": 0.9411764705882353,
+      "tp": 8,
+      "fp": 0,
+      "fn": 1
+    },
+    "exact_match": 0.9565217391304348,
+    "labels": {
+      "weather": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 8,
+        "fp": 0,
+        "fn": 0
+      },
+      "music_control": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "pc_control": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 0,
+        "fn": 1
+      }
+    },
+    "no_match": {
+      "cases": 14,
+      "correct_rejections": 14,
+      "false_promotions": 0
+    }
+  },
+  "runtime": {
+    "warm_cpu_mean_ms": 9.514873335137963,
+    "warm_cpu_p95_ms": 12.06770003773272,
+    "artifact_bytes": 487738601,
+    "classifier_head_bytes": 6608,
+    "artifact_sha256": "dd18b54aef3458b6850ce232a722f078ca6796461da89d7ec8e4727c602a799a"
+  }
+}

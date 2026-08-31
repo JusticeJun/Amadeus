@@ -1,0 +1,81 @@
+{
+  "near_duplicate_metric": "character-trigram Jaccard >= 0.85; audit-only",
+  "semantic_leakage_assurance": "provenance/process separation; no embedding-based semantic claim",
+  "splits": {
+    "train": {
+      "base_exact_overlap": {
+        "external_test": 0,
+        "train": 0,
+        "validation": 0
+      },
+      "conflicting_labels": 0,
+      "holdout_max_similarity": 0.4545,
+      "holdout_near_overlap": 0,
+      "holdout_normalized_overlap": 0,
+      "label_sets": {
+        "music_control": 74,
+        "music_control+pc_control": 28,
+        "music_control+weather": 28,
+        "no_match": 424,
+        "pc_control": 74,
+        "pc_control+weather": 28,
+        "weather": 64
+      },
+      "manual_normalized_overlap": 0,
+      "normalized_unique": 720,
+      "routing_roles": {
+        "ambiguous": 76,
+        "domain_no_action": 68,
+        "factual_question": 40,
+        "full_multilabel": 84,
+        "lexical_trap": 40,
+        "neither": 48,
+        "no_tool": 152,
+        "partial_multilabel": 132,
+        "positive": 80
+      },
+      "rows": 720,
+      "within_split_max_similarity": 0.8,
+      "within_split_near_overlap": 0
+    },
+    "validation": {
+      "base_exact_overlap": {
+        "external_test": 0,
+        "train": 0,
+        "validation": 0
+      },
+      "conflicting_labels": 0,
+      "holdout_max_similarity": 0.2273,
+      "holdout_near_overlap": 0,
+      "holdout_normalized_overlap": 0,
+      "label_sets": {
+        "music_control": 30,
+        "music_control+pc_control": 10,
+        "music_control+weather": 10,
+        "no_match": 154,
+        "pc_control": 30,
+        "pc_control+weather": 10,
+        "weather": 26
+      },
+      "manual_normalized_overlap": 0,
+      "normalized_unique": 270,
+      "routing_roles": {
+        "ambiguous": 29,
+        "domain_no_action": 28,
+        "factual_question": 14,
+        "full_multilabel": 30,
+        "lexical_trap": 14,
+        "neither": 21,
+        "no_tool": 48,
+        "partial_multilabel": 54,
+        "positive": 32
+      },
+      "rows": 270,
+      "within_split_max_similarity": 0.7872,
+      "within_split_near_overlap": 0
+    }
+  },
+  "train_validation_max_similarity": 0.7,
+  "train_validation_near_overlap": 0,
+  "train_validation_normalized_overlap": 0
+}

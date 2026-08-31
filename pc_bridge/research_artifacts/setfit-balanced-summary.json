@@ -1,0 +1,62 @@
+{
+  "artifact": {
+    "bytes": 487738601,
+    "classifier_head_bytes": 6608,
+    "reproducible_runs": 2,
+    "sha256": "dd18b54aef3458b6850ce232a722f078ca6796461da89d7ec8e4727c602a799a",
+    "thresholds": {
+      "music_control": 0.85,
+      "pc_control": 0.78,
+      "weather": 0.70
+    },
+    "warm_cpu_mean_ms": 7.67,
+    "warm_cpu_p95_ms": 8.28
+  },
+  "comparison": {
+    "balanced": {
+      "external": {"exact": 0.9635, "f1": 0.8890, "oos_false_promotions": 64, "precision": 0.8980, "recall": 0.8803},
+      "holdout": {"exact": 0.6692, "f1": 0.7425, "oos_false_promotions": 35, "precision": 0.7654, "recall": 0.7211},
+      "holdout_multi": {"exact": 0.3478, "f1": 0.7792, "precision": 1.0, "recall": 0.6383},
+      "validation": {"exact": 0.9536, "f1": 0.9049, "oos_false_promotions": 40, "precision": 0.9379, "recall": 0.8741}
+    },
+    "original": {
+      "external": {"exact": 0.9667, "f1": 0.8990, "oos_false_promotions": 50, "precision": 0.9216, "recall": 0.8775},
+      "holdout": {"exact": 0.6241, "f1": 0.6667, "oos_false_promotions": 38, "precision": 0.7419, "recall": 0.6053},
+      "holdout_multi": {"exact": 0.0, "f1": 0.3793, "precision": 1.0, "recall": 0.2340},
+      "validation": {"exact": 0.9458, "f1": 0.8638, "oos_false_promotions": 35, "precision": 0.9404, "recall": 0.7988}
+    },
+    "positive_only": {
+      "external": {"exact": 0.9638, "f1": 0.8875, "oos_false_promotions": 58, "precision": 0.9036, "recall": 0.8718},
+      "holdout": {"exact": 0.6128, "f1": 0.6940, "oos_false_promotions": 47, "precision": 0.7216, "recall": 0.6684},
+      "holdout_multi": {"exact": 0.0435, "f1": 0.5538, "precision": 1.0, "recall": 0.3830},
+      "validation": {"exact": 0.9488, "f1": 0.8929, "oos_false_promotions": 42, "precision": 0.9323, "recall": 0.8567}
+    }
+  },
+  "conclusion": {
+    "hypothesis": "partially_supported",
+    "production_recommendation": "keep_current_production_baseline",
+    "reason": "Composition and independent holdout improve materially, but external precision and no-match rejection regress."
+  },
+  "frozen_manual": {
+    "exact_cases": 5,
+    "music_pc_failure": {"accepted": ["pc_control"], "expected": ["music_control", "pc_control"], "music_score": 0.8070, "pc_score": 0.7809},
+    "total_cases": 6
+  },
+  "reviewed_development": {
+    "ambiguous_exact": 0.5172,
+    "domain_no_action_exact": 0.8929,
+    "full_multilabel_exact": 0.5333,
+    "lexical_trap_exact": 1.0,
+    "neither_exact": 1.0,
+    "no_tool_exact": 0.9792,
+    "partial_multilabel_exact": 0.9259,
+    "positive_exact": 1.0,
+    "warning": "This validation slice participated in threshold selection and is not an independent holdout."
+  },
+  "weather_boundary": {
+    "false_positives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  }
+}
